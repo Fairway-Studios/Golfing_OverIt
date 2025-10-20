@@ -1,22 +1,61 @@
+using System;
+using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class SceneMGR : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    // Map keys to actions
+    private Dictionary<KeyCode, Action> keyActions;
+
+    [SerializeField] private GameObject menuCanvas;
+    [SerializeField] private GameObject settingsCanvas;
+    [SerializeField] private GameObject winCanvas;
+    [SerializeField] private GameObject loseCanvas;
+
+    private void Start()
     {
-        
+        settingsCanvas.SetActive(false);
+
+        keyActions = new Dictionary<KeyCode, Action>
+        {
+            { KeyCode.Escape, HandleEscape },
+            { KeyCode.S, ToggleSettings },
+            { KeyCode.W, ToggleWin },
+            { KeyCode.L, ToggleLoss },
+        };
     }
 
-    // Update is called once per frame
-    void Update()
+    private void Update()
     {
-        // Check if Escape key is pressed
-        if (Input.GetKeyDown(KeyCode.Escape))
+        foreach (var entry in keyActions)
         {
-            LoadSceneByName("MainMenu");
+            if (Input.GetKeyDown(entry.Key))
+            {
+                entry.Value?.Invoke();
+            }
         }
+    }
+
+    private void HandleEscape()
+    {
+        LoadSceneByName("MainMenu");
+    }
+    public void ToggleSettings()
+    {
+        if (menuCanvas != null) menuCanvas.SetActive(false);
+        if (settingsCanvas != null) settingsCanvas.SetActive(true);
+    }
+    private void ToggleWin()
+    {
+        if (menuCanvas != null) menuCanvas.SetActive(false);
+        if (winCanvas != null) winCanvas.SetActive(true);
+    }
+    private void ToggleLoss()
+    {
+        if (menuCanvas != null) menuCanvas.SetActive(false);
+        if (loseCanvas != null) loseCanvas.SetActive(true);
     }
 
     public void LoadSceneByName(string sceneName)
