@@ -532,6 +532,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: SingleplayerUI
       objectReference: {fileID: 0}
+    - target: {fileID: 5089655548838762061, guid: 601129dd0cfdb0d42808d2103fd52f39, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8262369492507314139, guid: 601129dd0cfdb0d42808d2103fd52f39, type: 3}
       propertyPath: m_Pivot.x
       value: 0
