@@ -1,20 +1,21 @@
 using UnityEngine;
-using UnityEngine.InputSystem; // For Xbox controller input
+using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class ClubController2D : MonoBehaviour
 {
     [Header("References")]
-    public Transform playerOrigin;      // The golfer's torso or hand origin
-    public GameObject golfBallPrefab;   // Assign your golf ball prefab here
+    public Transform playerOrigin;
+    public GameObject golfBallPrefab;
 
+    // modifiable physics components to tweak swing responsiveness
     [Header("Swing Settings")]
-    public float maxForce = 500f;       // Swing strength
-    public float torqueForce = 300f;    // Rotational torque
-    public float maxDistance = 2.5f;    // Max distance the club can move from the player
+    public float maxForce = 500f;       
+    public float torqueForce = 300f;    
+    public float maxDistance = 2.5f;    
 
     [Header("Ball Spawn Settings")]
-    public Vector2 ballOffset = new Vector2(0, -0.5f); // Offset below player's feet
+    public Vector2 ballOffset = new Vector2(0, -0.5f);
 
     private Rigidbody2D rb;
     private Vector2 moveInput;
@@ -26,12 +27,10 @@ public class ClubController2D : MonoBehaviour
 
     void Update()
     {
-        // Read left stick input from Xbox controller
         if (Gamepad.current != null)
         {
             moveInput = Gamepad.current.leftStick.ReadValue();
 
-            // Check for A button press (buttonSouth)
             if (Gamepad.current.buttonSouth.wasPressedThisFrame)
             {
                 SpawnGolfBall();
@@ -52,14 +51,6 @@ public class ClubController2D : MonoBehaviour
         Vector2 force = inputDir * maxForce * moveInput.magnitude;
         rb.AddForce(force);
 
-        // Optionally: add rotational torque for right stick spin
-        if (Gamepad.current != null)
-        {
-            float torqueInput = Gamepad.current.rightStick.x.ReadValue();
-            rb.AddTorque(-torqueInput * torqueForce);
-        }
-
-        // Constrain distance from player (keep within swing range)
         Vector2 offset = rb.position - (Vector2)playerOrigin.position;
         if (offset.magnitude > maxDistance)
         {
