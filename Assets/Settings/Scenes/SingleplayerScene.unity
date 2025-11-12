@@ -241,6 +241,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2957008195440903393, guid: 269656326e1414d4981fa2a6e1817baf, type: 3}
+      propertyPath: maxForce
+      value: 400
+      objectReference: {fileID: 0}
     - target: {fileID: 4107313673102670305, guid: 269656326e1414d4981fa2a6e1817baf, type: 3}
       propertyPath: m_Name
       value: Player
@@ -251,7 +255,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5370575747530327701, guid: 269656326e1414d4981fa2a6e1817baf, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -2.43
+      value: -2.44
       objectReference: {fileID: 0}
     - target: {fileID: 5370575747530327701, guid: 269656326e1414d4981fa2a6e1817baf, type: 3}
       propertyPath: m_LocalPosition.z
@@ -626,6 +630,15 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 508632329785103521, guid: 601129dd0cfdb0d42808d2103fd52f39, type: 3}
+      propertyPath: m_Name
+      value: Title
+      objectReference: {fileID: 0}
+    - target: {fileID: 2023081037156601986, guid: 601129dd0cfdb0d42808d2103fd52f39, type: 3}
+      propertyPath: m_text
+      value: Use LMB to spawn ball and mouse to control swing. If controller connected
+        use left joystick and A button to spawn.
+      objectReference: {fileID: 0}
     - target: {fileID: 2639150252023539402, guid: 601129dd0cfdb0d42808d2103fd52f39, type: 3}
       propertyPath: m_SizeDelta.x
       value: 327.0061
@@ -642,13 +655,17 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -32.3315
       objectReference: {fileID: 0}
+    - target: {fileID: 4535304769994545863, guid: 601129dd0cfdb0d42808d2103fd52f39, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 160
+      objectReference: {fileID: 0}
     - target: {fileID: 5089655548838762061, guid: 601129dd0cfdb0d42808d2103fd52f39, type: 3}
       propertyPath: m_Name
       value: SingleplayerUI
       objectReference: {fileID: 0}
     - target: {fileID: 5089655548838762061, guid: 601129dd0cfdb0d42808d2103fd52f39, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8262369492507314139, guid: 601129dd0cfdb0d42808d2103fd52f39, type: 3}
       propertyPath: m_Pivot.x
