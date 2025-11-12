@@ -245,6 +245,10 @@ PrefabInstance:
       propertyPath: maxForce
       value: 400
       objectReference: {fileID: 0}
+    - target: {fileID: 2957008195440903393, guid: 269656326e1414d4981fa2a6e1817baf, type: 3}
+      propertyPath: golfBallPrefab
+      value: 
+      objectReference: {fileID: 3491301912689170450, guid: 17ef4bf9551b3b541921829678302120, type: 3}
     - target: {fileID: 4107313673102670305, guid: 269656326e1414d4981fa2a6e1817baf, type: 3}
       propertyPath: m_Name
       value: Player
