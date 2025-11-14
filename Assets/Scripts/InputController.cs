@@ -2,19 +2,18 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(Rigidbody2D))]
-public class ClubController2D : MonoBehaviour
+public class InputController : MonoBehaviour
 {
     [Header("References")]
     public Transform playerOrigin;
     public GameObject golfBallPrefab;
 
     [Header("Swing Settings")]
-    public float maxForce = 500f;
-    public float torqueForce = 300f;
-    public float maxDistance = 2.5f;
+    public float maxForce;
+    public float maxDistance;
 
     [Header("Ball Spawn Settings")]
-    public Vector2 ballOffset = new Vector2(0, -0.5f);
+    public Vector2 ballOffset;
 
     private Rigidbody2D rb;
     private Vector2 moveInput;
@@ -29,25 +28,22 @@ public class ClubController2D : MonoBehaviour
     {
         if (Gamepad.current != null)
         {
-            moveInput = Gamepad.current.leftStick.ReadValue();
             usingMouse = false;
 
-            // spawn golf ball when bottom controlled button pressed
-            if (Gamepad.current.buttonSouth.wasPressedThisFrame)
-            {
-                SpawnGolfBall();
-            }
-        }
-        else
-        {
-            // default to mouse control if no controller detected
-            usingMouse = true;
-            moveInput = Vector2.zero;
+            moveInput = Gamepad.current.leftStick.ReadValue();
 
-            // Spawn golf ball when LMB is pressed
-            if (Mouse.current.leftButton.wasPressedThisFrame)
+            if (Gamepad.current.buttonSouth.wasPressedThisFrame)
                 SpawnGolfBall();
+
+            return;
         }
+
+        usingMouse = true;
+        moveInput = Vector2.zero;
+
+        if (Mouse.current.leftButton.wasPressedThisFrame)
+            SpawnGolfBall();
+
     }
 
     void FixedUpdate()
@@ -87,7 +83,7 @@ public class ClubController2D : MonoBehaviour
 
         Vector2 clampedTarget = (Vector2)playerOrigin.position + direction;
 
-        Vector2 moveDelta = (clampedTarget - rb.position) * 50f;
+        Vector2 moveDelta = (clampedTarget - rb.position) * 30f;
         rb.linearVelocity = moveDelta;
     }
 

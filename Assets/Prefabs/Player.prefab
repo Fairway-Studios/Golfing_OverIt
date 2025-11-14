@@ -932,11 +932,10 @@ GameObject:
   - component: {fileID: 1814593589241955398}
   - component: {fileID: 878932701951817116}
   - component: {fileID: 6149565543543606879}
-  - component: {fileID: 2957008195440903393}
   - component: {fileID: 556592431272565632}
   m_Layer: 0
   m_Name: Head
-  m_TagString: Untagged
+  m_TagString: Club
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -950,7 +949,7 @@ Transform:
   m_GameObject: {fileID: 2587916701828743862}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.21, y: -0.9, z: 0}
+  m_LocalPosition: {x: 0.21, y: -1.09, z: 0}
   m_LocalScale: {x: 0.5, y: 0.3, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1023,7 +1022,7 @@ Rigidbody2D:
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
-  m_Mass: 0.2
+  m_Mass: 0.3
   m_LinearDamping: 100
   m_AngularDamping: 100
   m_GravityScale: 1
@@ -1052,10 +1051,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playerOrigin: {fileID: 5370575747530327701}
   golfBallPrefab: {fileID: 3491301912689170450, guid: 17ef4bf9551b3b541921829678302120, type: 3}
-  maxForce: 500
-  torqueForce: 300
-  maxDistance: 2.5
-  ballOffset: {x: 0.05, y: -1}
+  maxForce: 800
+  maxDistance: 2
+  ballOffset: {x: 0.3, y: -1.5}
 --- !u!255 &6149565543543606879
 FixedJoint2D:
   m_ObjectHideFlags: 0
@@ -1071,28 +1069,10 @@ FixedJoint2D:
   m_BreakTorque: Infinity
   m_BreakAction: 3
   m_AutoConfigureConnectedAnchor: 0
-  m_Anchor: {x: 0.0000003272295, y: 0.0000004374983}
-  m_ConnectedAnchor: {x: 2.1000004, y: -0.44999993}
+  m_Anchor: {x: 0.00000034987926, y: 0.00000022530581}
+  m_ConnectedAnchor: {x: 2.1000037, y: -0.46999994}
   m_DampingRatio: 0
   m_Frequency: 0
---- !u!114 &2957008195440903393
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2587916701828743862}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 19adb276957d834419e9708d7a87143c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  playerOrigin: {fileID: 5370575747530327701}
-  golfBallPrefab: {fileID: 0}
-  maxForce: 500
-  torqueForce: 300
-  maxDistance: 2.5
-  ballOffset: {x: 0, y: -0.5}
 --- !u!70 &556592431272565632
 CapsuleCollider2D:
   m_ObjectHideFlags: 0
