@@ -6,22 +6,30 @@ public class InputController : MonoBehaviour
 {
     [Header("References")]
     public Transform playerOrigin;
-    public GameObject golfBallPrefab;
 
     [Header("Swing Settings")]
-    public float maxForce;
-    public float maxDistance;
+    public float maxForce = 1000f;
+    public float maxDistance = 2f;
 
-    [Header("Ball Spawn Settings")]
-    public Vector2 ballOffset;
+    [Header("Ball Hit Settings")]
+    public float impulseMultiplier = 1f;
+    public float upwardBias = 0.5f; 
+    public float minSwingSpeed = 1f;
+    public float hitRadius = 0.5f; 
 
     private Rigidbody2D rb;
     private Vector2 moveInput;
     private bool usingMouse = false;
+    private Vector2 previousPosition;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+    }
+
+    void Start()
+    {
+        previousPosition = rb.position;
     }
 
     void Update()
@@ -29,26 +37,18 @@ public class InputController : MonoBehaviour
         if (Gamepad.current != null)
         {
             usingMouse = false;
-
             moveInput = Gamepad.current.leftStick.ReadValue();
-
-            if (Gamepad.current.buttonSouth.wasPressedThisFrame)
-                SpawnGolfBall();
-
             return;
         }
-
         usingMouse = true;
         moveInput = Vector2.zero;
-
-        if (Mouse.current.leftButton.wasPressedThisFrame)
-            SpawnGolfBall();
-
     }
 
     void FixedUpdate()
     {
         if (playerOrigin == null) return;
+
+        Vector2 currentVelocity = (rb.position - previousPosition) / Time.fixedDeltaTime;
 
         if (usingMouse)
         {
@@ -58,6 +58,10 @@ public class InputController : MonoBehaviour
         {
             HandleControllerMovement();
         }
+
+        CheckBallHit(currentVelocity);
+
+        previousPosition = rb.position;
     }
 
     private void HandleControllerMovement()
@@ -65,7 +69,6 @@ public class InputController : MonoBehaviour
         Vector2 inputDir = moveInput.normalized;
         Vector2 force = inputDir * maxForce * moveInput.magnitude;
         rb.AddForce(force);
-
         ClampToPlayerRadius();
     }
 
@@ -73,7 +76,6 @@ public class InputController : MonoBehaviour
     {
         Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue());
         Vector2 targetPos = (Vector2)mouseWorldPos;
-
         Vector2 direction = targetPos - (Vector2)playerOrigin.position;
 
         if (direction.magnitude > maxDistance)
@@ -82,8 +84,7 @@ public class InputController : MonoBehaviour
         }
 
         Vector2 clampedTarget = (Vector2)playerOrigin.position + direction;
-
-        Vector2 moveDelta = (clampedTarget - rb.position) * 30f;
+        Vector2 moveDelta = (clampedTarget - rb.position) * 80f;
         rb.linearVelocity = moveDelta;
     }
 
@@ -96,15 +97,34 @@ public class InputController : MonoBehaviour
         }
     }
 
-    private void SpawnGolfBall()
+    private void CheckBallHit(Vector2 clubVelocity)
     {
-        if (golfBallPrefab == null || playerOrigin == null)
-        {
-            Debug.LogWarning("Missing golfBallPrefab or playerOrigin reference!");
-            return;
-        }
+        GameObject ball = GameObject.FindGameObjectWithTag("GolfBall");
+        if (ball == null) return;
 
-        Vector2 spawnPos = (Vector2)playerOrigin.position + ballOffset;
-        Instantiate(golfBallPrefab, spawnPos, Quaternion.identity);
+        float distance = Vector2.Distance(rb.position, ball.transform.position);
+
+        if (distance < hitRadius)
+        {
+            float swingSpeed = clubVelocity.magnitude;
+
+            if (swingSpeed >= minSwingSpeed)
+            {
+                HitBall(ball, clubVelocity);
+            }
+        }
+    }
+
+    private void HitBall(GameObject ball, Vector2 clubVelocity)
+    {
+        Rigidbody2D ballRb = ball.GetComponent<Rigidbody2D>();
+        if (ballRb != null)
+        {
+            // Add horizontal and vertical impulse to provide more satisfying launch
+            Vector2 impulse = clubVelocity * impulseMultiplier;
+            impulse.y += Mathf.Abs(impulse.x) * upwardBias;
+
+            ballRb.AddForce(impulse, ForceMode2D.Impulse);
+        }
     }
 }
