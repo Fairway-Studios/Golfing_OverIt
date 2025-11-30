@@ -1,19 +1,12 @@
 using UnityEngine;
+using UnityEngine.UI;
 
-public class PlayerColorController : MonoBehaviour
+public class AnaglyphRenderingController : MonoBehaviour
 {
-    [Header("HSV Adjustment")]
-    [Range(0f, 360f)]
-    public float hueShift = 0f;
-
-    [Range(0f, 1f)]
-    public float saturationShift = 0f;
-
-    [Range(0f, 1f)]
-    public float valueShift = 0f;
-
-    [Range(0f, 1f)]
-    public float opacity = 1f;
+    private float hueShift = 0f;
+    private float saturationShift = 0.5f;
+    private float valueShift = 1f;
+    private float opacityMultiplier = 1f;
 
     private SpriteRenderer[] allRenderers;
     private Color[] originalColors;
@@ -21,57 +14,90 @@ public class PlayerColorController : MonoBehaviour
     void Start()
     {
         allRenderers = GetComponentsInChildren<SpriteRenderer>();
-
         originalColors = new Color[allRenderers.Length];
+
+        Debug.Log($"[{gameObject.name}] Found {allRenderers.Length} SpriteRenderers");
+
         for (int i = 0; i < allRenderers.Length; i++)
         {
             originalColors[i] = allRenderers[i].color;
+            Debug.Log($"[{gameObject.name}] Renderer {i}: {allRenderers[i].name}, Original Color: {originalColors[i]}");
         }
-    }
 
-    void Update()
-    {
         ApplyHSVAdjustment();
     }
 
     public void ApplyHSVAdjustment()
     {
+        Debug.Log($"[{gameObject.name}] Applying HSV - Hue: {hueShift}, Sat: {saturationShift}, Val: {valueShift}, Opacity: {opacityMultiplier}");
+
         for (int i = 0; i < allRenderers.Length; i++)
         {
             if (allRenderers[i] != null)
             {
-                Color adjustedColor = AdjustColorHSV(originalColors[i], hueShift, saturationShift, valueShift);
-                adjustedColor.a = opacity;
-                allRenderers[i].color = adjustedColor;
+                Color original = originalColors[i];
+                Color adjusted = AdjustColorHSV(original, hueShift, saturationShift, valueShift);
+                adjusted.a = original.a * opacityMultiplier;
+
+                allRenderers[i].color = adjusted;
+
+                Debug.Log($"[{gameObject.name}] Renderer {i} adjusted to: {adjusted}");
             }
         }
     }
+
 
     private Color AdjustColorHSV(Color originalColor, float hueShift, float saturationShift, float valueShift)
     {
         Color.RGBToHSV(originalColor, out float h, out float s, out float v);
 
+        Debug.Log($"Original HSV: H={h}, S={s}, V={v}");
+
         h = Mathf.Repeat(h + (hueShift / 360f), 1f);
         s = Mathf.Clamp01(s + saturationShift);
         v = Mathf.Clamp01(v + valueShift);
 
-        Color adjustedColor = Color.HSVToRGB(h, s, v);
+        Debug.Log($"Adjusted HSV: H={h}, S={s}, V={v}");
 
+        Color adjustedColor = Color.HSVToRGB(h, s, v);
         return adjustedColor;
     }
 
     public void ResetColors()
     {
+        Debug.Log($"[{gameObject.name}] Resetting colors");
         hueShift = 0f;
         saturationShift = 0f;
         valueShift = 0f;
-        opacity = 1f;
+        opacityMultiplier = 1f;
         ApplyHSVAdjustment();
     }
 
-    public void SetOpacity(float newOpacity)
+    public void SetHue(float hue)
     {
-        opacity = Mathf.Clamp01(newOpacity);
+        Debug.Log($"[{gameObject.name}] SetHue called with: {hue}");
+        hueShift = hue;
+        ApplyHSVAdjustment();
+    }
+
+    public void SetSaturation(float sat)
+    {
+        Debug.Log($"[{gameObject.name}] SetSaturation called with: {sat}");
+        saturationShift = sat;
+        ApplyHSVAdjustment();
+    }
+
+    public void SetValue(float val)
+    {
+        Debug.Log($"[{gameObject.name}] SetValue called with: {val}");
+        valueShift = val;
+        ApplyHSVAdjustment();
+    }
+
+    public void SetOpacity(float opacity)
+    {
+        Debug.Log($"[{gameObject.name}] SetOpacity called with: {opacity}");
+        opacityMultiplier = Mathf.Clamp01(opacity);
         ApplyHSVAdjustment();
     }
 }

@@ -1,48 +1,59 @@
 using UnityEngine;
-using Unity.Cinemachine;
 
 public class GolfBallController : MonoBehaviour
 {
-    [Header("Stop Detection")]
-    [SerializeField] private float stoppedVelocityThreshold = 0.1f;
+    [SerializeField] private float stoppedVelocityThreshold = 0.2f;
     [SerializeField] private float stoppedCheckDuration = 0.5f;
-
-    [Header("Teleport Settings")]
-    [SerializeField] private Vector3 playerOffsetFromBall = new Vector3(-2f, 0f, 0f);
+    [SerializeField] private Transform player;
+    [SerializeField] private Transform cameraTransform;
+    [SerializeField] private Vector3 playerOffsetFromBall = new Vector3(-0.3f, 1.4f, 0f);
 
     private Rigidbody2D rb;
-    private Transform player;
     private float timeStationary = 0f;
     private bool hasTeleported = false;
-    private bool ballWasHit = false;
+    private bool shouldTeleport = false;
+    private Vector3 hitStartPosition;
+    private bool hasRecordedHitStart = false;
+    private CameraController camController;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
-
-        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-        player = playerObj.transform;
+        camController = Object.FindFirstObjectByType<CameraController>();
     }
 
     void FixedUpdate()
     {
-        if (player == null) return;
+        float speed = rb.linearVelocity.magnitude;
 
-        if (rb.linearVelocity.magnitude > stoppedVelocityThreshold)
+        if (!hasRecordedHitStart && speed > stoppedVelocityThreshold)
+        {
+            hitStartPosition = transform.position;
+            hasRecordedHitStart = true;
+        }
+
+        if (!hasTeleported && speed > stoppedVelocityThreshold)
         {
             timeStationary = 0f;
-            ballWasHit = true;
         }
-        else if (ballWasHit && !hasTeleported)
+        else if (!hasTeleported && speed <= stoppedVelocityThreshold)
         {
-            rb.linearVelocity = Vector3.zero;
             timeStationary += Time.fixedDeltaTime;
-
             if (timeStationary >= stoppedCheckDuration)
             {
-                TeleportToPosition();
-                hasTeleported = true;
+                rb.linearVelocity = Vector2.zero;
+                shouldTeleport = true;
             }
+        }
+    }
+
+    private void Update()
+    {
+        if (shouldTeleport)
+        {
+            TeleportToPosition();
+            shouldTeleport = false;
+            hasTeleported = true;
         }
     }
 
@@ -50,7 +61,30 @@ public class GolfBallController : MonoBehaviour
     {
         Vector3 ballPosition = transform.position;
 
+        if (hasRecordedHitStart)
+        {
+            float distance = Vector2.Distance(hitStartPosition, ballPosition);
+            Debug.Log($"Shot Distance: {distance:F2}m");
+            hasRecordedHitStart = false;
+        }
+
+        // Teleport player
         player.position = ballPosition + playerOffsetFromBall;
+
+        // Update camera
+        cameraTransform.position = new Vector3(ballPosition.x, ballPosition.y, cameraTransform.position.z);
+
+        if (camController != null)
+        {
+            camController.SetBaseHeight(player.position.y);
+        }
+
+        // Notify controllers to disable swinging
+        InputController[] controllers = Object.FindObjectsByType<InputController>(FindObjectsSortMode.None);
+        foreach (var controller in controllers)
+        {
+            controller.OnPlayerTeleported();
+        }
 
         Invoke(nameof(ResetTeleportFlag), 0.1f);
     }
@@ -58,7 +92,6 @@ public class GolfBallController : MonoBehaviour
     void ResetTeleportFlag()
     {
         hasTeleported = false;
-        ballWasHit = false;
         timeStationary = 0f;
     }
 }

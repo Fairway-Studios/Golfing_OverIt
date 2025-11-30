@@ -554,7 +554,6 @@ GameObject:
   - component: {fileID: 1814593589241955398}
   - component: {fileID: 878932701951817116}
   - component: {fileID: 6149565543543606879}
-  - component: {fileID: 556592431272565632}
   m_Layer: 0
   m_Name: Head
   m_TagString: Club
@@ -671,13 +670,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 19adb276957d834419e9708d7a87143c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  playerIndex: 0
+  preferMouse: 0
   playerOrigin: {fileID: 5370575747530327701}
-  maxForce: 800
+  feedbackText: {fileID: 0}
+  controllerSens: 2000
+  mouseSens: 100
   maxDistance: 2
-  impulseMultiplier: 1
-  upwardBias: 1
+  availableClubs:
+  - {fileID: 11400000, guid: b232ae3dbc4b7ee48bb506f5317fb978, type: 2}
+  - {fileID: 11400000, guid: e7b49a51d4890fb4c8ab5b14ee48a28f, type: 2}
+  - {fileID: 11400000, guid: d7b1d9de774667c499d14643cc9ec123, type: 2}
+  - {fileID: 11400000, guid: 52d684063550f5147b5ec17160f91a22, type: 2}
+  currentClubIndex: 1
   minSwingSpeed: 1
+  maxSwingSpeed: 12
   hitRadius: 0.5
+  readyDistance: 1
+  hitSounds:
+  - {fileID: 8300000, guid: 772bed84028a2544a94725f8198af799, type: 3}
+  - {fileID: 8300000, guid: 6dafd75953c10284290492e386193d42, type: 3}
+  - {fileID: 8300000, guid: d430f4c74bd72db41a726e0bb37881e5, type: 3}
+  - {fileID: 8300000, guid: 71852a1a053c7f2429706c6277f53b4c, type: 3}
+  - {fileID: 8300000, guid: d8e91fc40efdc27468164b2617dd1390, type: 3}
 --- !u!255 &6149565543543606879
 FixedJoint2D:
   m_ObjectHideFlags: 0
@@ -697,43 +712,6 @@ FixedJoint2D:
   m_ConnectedAnchor: {x: 2.1000037, y: -0.46999994}
   m_DampingRatio: 0
   m_Frequency: 0
---- !u!70 &556592431272565632
-CapsuleCollider2D:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2587916701828743862}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Density: 1
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ForceSendLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ForceReceiveLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ContactCaptureLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_CallbackLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_IsTrigger: 0
-  m_UsedByEffector: 0
-  m_CompositeOperation: 0
-  m_CompositeOrder: 0
-  m_Offset: {x: 0.0017869469, y: -0.0000026822083}
-  m_Size: {x: 1.0035743, y: 1.6726236}
-  m_Direction: 0
 --- !u!1 &3465663659582904329
 GameObject:
   m_ObjectHideFlags: 0
@@ -806,6 +784,7 @@ GameObject:
   - component: {fileID: 5370575747530327701}
   - component: {fileID: 3388475363985543380}
   - component: {fileID: 9206144124866727411}
+  - component: {fileID: 1343860058876995501}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -874,10 +853,52 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 88cb305a8d150dc48871ca0ab9e40dfb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hueShift: 0
-  saturationShift: 0
-  valueShift: 0
-  opacity: 1
+--- !u!114 &1343860058876995501
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4107313673102670305}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62899f850307741f2a39c98a8b639597, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Actions: {fileID: -944628639613478452, guid: 40c63ef363a00ce4bb4cf8987b8169ce, type: 3}
+  m_NotificationBehavior: 1
+  m_UIInputModule: {fileID: 0}
+  m_DeviceLostEvent:
+    m_PersistentCalls:
+      m_Calls: []
+  m_DeviceRegainedEvent:
+    m_PersistentCalls:
+      m_Calls: []
+  m_ControlsChangedEvent:
+    m_PersistentCalls:
+      m_Calls: []
+  m_ActionEvents:
+  - m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 4107313673102670305}
+        m_TargetAssemblyTypeName: 
+        m_MethodName: 
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: 
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+    m_ActionId: c6824cd3-96d4-4776-a3e4-5034d45162f9
+    m_ActionName: 'Gameplay/Swing[/Mouse/position]'
+  m_NeverAutoSwitchControlSchemes: 0
+  m_DefaultControlScheme: 
+  m_DefaultActionMap: Gameplay
+  m_SplitScreenIndex: -1
+  m_Camera: {fileID: 0}
 --- !u!1 &4982917583042819114
 GameObject:
   m_ObjectHideFlags: 0
@@ -908,7 +929,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -0.192, y: -2.18, z: 0}
-  m_LocalScale: {x: 0.4, y: 0.6, z: 0.5}
+  m_LocalScale: {x: 0.4, y: 0.65, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 5370575747530327701}
@@ -1286,7 +1307,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0.194, y: -2.18, z: 0}
-  m_LocalScale: {x: 0.4, y: 0.6, z: 0.5}
+  m_LocalScale: {x: 0.4, y: 0.65, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 5370575747530327701}
