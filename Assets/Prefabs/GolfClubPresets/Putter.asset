@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: Putter
   m_EditorClassIdentifier: 
   clubName: Putter
-  impulseMultiplier: 2
+  impulseMultiplier: 1
   upwardBias: 0

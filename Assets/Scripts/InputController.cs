@@ -1,5 +1,6 @@
 using System.Linq;
 using TMPro;
+using TMPro.Examples;
 using UnityEngine;
 using UnityEngine.Audio;
 using UnityEngine.InputSystem;
@@ -34,6 +35,7 @@ public class InputController : MonoBehaviour
     public AudioClip[] hitSounds;
 
     private Rigidbody2D rb;
+    private CameraController cameraController;
     private Vector2 moveInput;
     private Vector2 previousPosition;
     private PlayerInput playerInput;
@@ -45,6 +47,7 @@ public class InputController : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         playerInput = GetComponentInParent<PlayerInput>();
+        cameraController = Object.FindFirstObjectByType<CameraController>();
 
         if (playerInput == null)
         {
@@ -113,6 +116,14 @@ public class InputController : MonoBehaviour
         if (feedbackText != null)
             feedbackText.text = "Current Club: " + currentClub.clubName;
     }
+    public void OnMoveCamera(InputValue value)
+    {
+        if (cameraController != null)
+        {
+            Vector2 input = value.Get<Vector2>();
+            cameraController.OnCameraMove(input);
+        }
+    }
 
     void FixedUpdate()
     {
@@ -137,21 +148,10 @@ public class InputController : MonoBehaviour
             {
                 float distanceFromBall = Vector2.Distance(rb.position, ball.transform.position);
 
-                // Debug every frame when not ready
-                if (Time.frameCount % 30 == 0)
-                {
-                    Debug.Log($"[{transform.root.name}] NOT READY - Distance from ball: {distanceFromBall:F2}, need {readyDistance:F2}");
-                }
-
                 if (distanceFromBall > readyDistance)
                 {
                     canSwing = true;
-                    Debug.Log($"[{transform.root.name}] SWING READY! Distance: {distanceFromBall:F2}");
                 }
-            }
-            else
-            {
-                Debug.LogWarning($"[{transform.root.name}] Can't find ball with tag 'GolfBall'!");
             }
         }
 
@@ -159,14 +159,6 @@ public class InputController : MonoBehaviour
         if (canSwing)
         {
             CheckBallHit(currentVelocity);
-        }
-        else
-        {
-            // Debug why we can't swing
-            if (Time.frameCount % 60 == 0)
-            {
-                Debug.Log($"[{transform.root.name}] Skipping CheckBallHit - canSwing is false");
-            }
         }
 
         previousPosition = rb.position;
@@ -235,7 +227,6 @@ public class InputController : MonoBehaviour
     {
         if (currentClub == null)
         {
-            Debug.LogWarning("No club selected!");
             return;
         }
 
@@ -248,8 +239,6 @@ public class InputController : MonoBehaviour
             ballRb.AddForce(impulse, ForceMode2D.Impulse);
 
             PlayRandomHitSound();
-
-            Debug.Log($"[{transform.root.name}] Ball hit! Swing disabled until moved away.");
             canSwing = false;
         }
     }
@@ -277,14 +266,9 @@ public class InputController : MonoBehaviour
 
             Vector2 dir = (rb.position - (Vector2)ball.transform.position).normalized;
             if (dir.sqrMagnitude < 0.01f)
-                dir = Vector2.right; // fallback safety
+                dir = Vector2.right;
 
             rb.position = (Vector2)ball.transform.position + dir * (readyDistance + 0.5f);
-
-            Debug.Log(
-                $"[{transform.root.name}] TELEPORTED - " +
-                $"Club forced away from ball. New Distance: {Vector2.Distance(rb.position, ball.transform.position):F2}"
-            );
         }
 
         // Disable swinging until movement reached

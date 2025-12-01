@@ -165,7 +165,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8542627a44e92d54c9a9101111521d7b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stoppedVelocityThreshold: 0.5
+  stoppedVelocityThreshold: 1
   stoppedCheckDuration: 1
   player: {fileID: 0}
   cameraTransform: {fileID: 0}

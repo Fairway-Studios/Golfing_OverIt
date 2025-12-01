@@ -109,6 +109,33 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""SelectBallA"",
+                    ""type"": ""Button"",
+                    ""id"": ""5cc1787e-3d71-4bd2-9872-e2f18ec3ff6c"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""SelectBallB"",
+                    ""type"": ""Button"",
+                    ""id"": ""6777f08c-44eb-4a69-a614-60c8cfbf5588"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""MoveCamera"",
+                    ""type"": ""Value"",
+                    ""id"": ""42e7da9f-6cf9-40a6-8c30-4921d5fec21f"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": true
                 }
             ],
             ""bindings"": [
@@ -155,6 +182,61 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
                     ""action"": ""CycleClub"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""69ced982-321f-46a6-b054-300ac281262d"",
+                    ""path"": ""<Mouse>/leftButton"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Mouse"",
+                    ""action"": ""SelectBallA"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""4402a7e6-6a78-472b-9e43-cec8b9d17c37"",
+                    ""path"": ""<Gamepad>/buttonSouth"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Controller"",
+                    ""action"": ""SelectBallA"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""d420e42c-4d8b-4c9f-a4b8-4a47b9abeee7"",
+                    ""path"": ""<Mouse>/rightButton"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Mouse"",
+                    ""action"": ""SelectBallB"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""2c93460d-d732-46b2-b0ac-46a860c3e1ea"",
+                    ""path"": ""<Gamepad>/buttonEast"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Controller"",
+                    ""action"": ""SelectBallB"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""d103e0f2-23a6-48de-84a2-d2ace3e63dd2"",
+                    ""path"": ""<Gamepad>/rightStick"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Controller"",
+                    ""action"": ""MoveCamera"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -167,6 +249,11 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
                 {
                     ""devicePath"": ""<Mouse>"",
                     ""isOptional"": false,
+                    ""isOR"": false
+                },
+                {
+                    ""devicePath"": ""<Keyboard>"",
+                    ""isOptional"": true,
                     ""isOR"": false
                 }
             ]
@@ -188,6 +275,9 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         m_Gameplay = asset.FindActionMap("Gameplay", throwIfNotFound: true);
         m_Gameplay_Swing = m_Gameplay.FindAction("Swing", throwIfNotFound: true);
         m_Gameplay_CycleClub = m_Gameplay.FindAction("CycleClub", throwIfNotFound: true);
+        m_Gameplay_SelectBallA = m_Gameplay.FindAction("SelectBallA", throwIfNotFound: true);
+        m_Gameplay_SelectBallB = m_Gameplay.FindAction("SelectBallB", throwIfNotFound: true);
+        m_Gameplay_MoveCamera = m_Gameplay.FindAction("MoveCamera", throwIfNotFound: true);
     }
 
     ~@PlayerInputActions()
@@ -270,6 +360,9 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
     private List<IGameplayActions> m_GameplayActionsCallbackInterfaces = new List<IGameplayActions>();
     private readonly InputAction m_Gameplay_Swing;
     private readonly InputAction m_Gameplay_CycleClub;
+    private readonly InputAction m_Gameplay_SelectBallA;
+    private readonly InputAction m_Gameplay_SelectBallB;
+    private readonly InputAction m_Gameplay_MoveCamera;
     /// <summary>
     /// Provides access to input actions defined in input action map "Gameplay".
     /// </summary>
@@ -289,6 +382,18 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Gameplay/CycleClub".
         /// </summary>
         public InputAction @CycleClub => m_Wrapper.m_Gameplay_CycleClub;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/SelectBallA".
+        /// </summary>
+        public InputAction @SelectBallA => m_Wrapper.m_Gameplay_SelectBallA;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/SelectBallB".
+        /// </summary>
+        public InputAction @SelectBallB => m_Wrapper.m_Gameplay_SelectBallB;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/MoveCamera".
+        /// </summary>
+        public InputAction @MoveCamera => m_Wrapper.m_Gameplay_MoveCamera;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -321,6 +426,15 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
             @CycleClub.started += instance.OnCycleClub;
             @CycleClub.performed += instance.OnCycleClub;
             @CycleClub.canceled += instance.OnCycleClub;
+            @SelectBallA.started += instance.OnSelectBallA;
+            @SelectBallA.performed += instance.OnSelectBallA;
+            @SelectBallA.canceled += instance.OnSelectBallA;
+            @SelectBallB.started += instance.OnSelectBallB;
+            @SelectBallB.performed += instance.OnSelectBallB;
+            @SelectBallB.canceled += instance.OnSelectBallB;
+            @MoveCamera.started += instance.OnMoveCamera;
+            @MoveCamera.performed += instance.OnMoveCamera;
+            @MoveCamera.canceled += instance.OnMoveCamera;
         }
 
         /// <summary>
@@ -338,6 +452,15 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
             @CycleClub.started -= instance.OnCycleClub;
             @CycleClub.performed -= instance.OnCycleClub;
             @CycleClub.canceled -= instance.OnCycleClub;
+            @SelectBallA.started -= instance.OnSelectBallA;
+            @SelectBallA.performed -= instance.OnSelectBallA;
+            @SelectBallA.canceled -= instance.OnSelectBallA;
+            @SelectBallB.started -= instance.OnSelectBallB;
+            @SelectBallB.performed -= instance.OnSelectBallB;
+            @SelectBallB.canceled -= instance.OnSelectBallB;
+            @MoveCamera.started -= instance.OnMoveCamera;
+            @MoveCamera.performed -= instance.OnMoveCamera;
+            @MoveCamera.canceled -= instance.OnMoveCamera;
         }
 
         /// <summary>
@@ -418,5 +541,26 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnCycleClub(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "SelectBallA" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnSelectBallA(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "SelectBallB" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnSelectBallB(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "MoveCamera" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnMoveCamera(InputAction.CallbackContext context);
     }
 }
