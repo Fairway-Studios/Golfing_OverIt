@@ -298,8 +298,12 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 212270582}
     - target: {fileID: 6541541978057945933, guid: 17ef4bf9551b3b541921829678302120, type: 3}
+      propertyPath: stoppedCheckDuration
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6541541978057945933, guid: 17ef4bf9551b3b541921829678302120, type: 3}
       propertyPath: stoppedVelocityThreshold
-      value: 1
+      value: 1.5
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -415,12 +419,16 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 212270582}
     - target: {fileID: 6541541978057945933, guid: 17ef4bf9551b3b541921829678302120, type: 3}
+      propertyPath: stoppedCheckDuration
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6541541978057945933, guid: 17ef4bf9551b3b541921829678302120, type: 3}
       propertyPath: playerOffsetFromBall.x
       value: -0.1
       objectReference: {fileID: 0}
     - target: {fileID: 6541541978057945933, guid: 17ef4bf9551b3b541921829678302120, type: 3}
       propertyPath: stoppedVelocityThreshold
-      value: 1
+      value: 1.5
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 2535398758669376381, guid: 17ef4bf9551b3b541921829678302120, type: 3}
@@ -492,7 +500,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1330145272685215411, guid: ef6b0cf2ea055b04480faa6cfb94a3ef, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

@@ -25,6 +25,7 @@ public class GolfBallController : MonoBehaviour
     void FixedUpdate()
     {
         float speed = rb.linearVelocity.magnitude;
+        Debug.Log(speed);
 
         if (!hasRecordedHitStart && speed > stoppedVelocityThreshold)
         {
