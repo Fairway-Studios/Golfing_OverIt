@@ -10,7 +10,6 @@ public class GolfBallController : MonoBehaviour
     [SerializeField] private float stoppedCheckDuration = 0.5f;
 
     private Rigidbody2D rb;
-    private SpriteRenderer spriteRenderer;
     private float timeStationary = 0f;
     private bool hasStopped = false;
     private bool isLocked = false;
@@ -20,7 +19,6 @@ public class GolfBallController : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
-        spriteRenderer = GetComponent<SpriteRenderer>();
     }
 
     void FixedUpdate()
