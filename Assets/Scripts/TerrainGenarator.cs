@@ -2,7 +2,7 @@
 using UnityEngine;
 
 #if UNITY_EDITOR
-using UnityEditor; // for EditorApplication.delayCall
+using UnityEditor; // EditorApplication.delayCall
 #endif
 
 /// <summary>
@@ -59,30 +59,61 @@ public class PerlinMountain2D : MonoBehaviour
     // ---------- SPAWNING ----------
     [Header("Spawners")]
     [Tooltip("Empty child on Ground where the player should spawn.")]
-    public Transform playerSpawnPoint;
+    public Transform playerOneSpawnPoint;
     [Tooltip("Empty child on Ground where the golf ball should spawn.")]
-    public Transform ballSpawnPoint;
+    public Transform ballOneSpawnPoint;
+    [Tooltip("Empty child on Ground where the player should spawn.")]
+    public Transform playerTwoSpawnPoint;
+    [Tooltip("Empty child on Ground where the golf ball should spawn.")]
+    public Transform ballTwoSpawnPoint;
 
     [Header("Prefabs")]
-    public GameObject playerPrefab;
-    public GameObject ballPrefab;
+    public GameObject playerOnePrefab;
+    public GameObject ballOnePrefab;
+
+    public GameObject playerTwoPrefab;
+    public GameObject ballTwoPrefab;
     // -------------------------------
 
     [Header("Editor")]
-    [Tooltip("If on, the generator will refresh when you tweak values. Uses a deferred call to avoid warnings.")]
+    [Tooltip("If on, the generator will refresh when you tweak values in the inspector.")]
     public bool autoRegenerateOnValidate = true;
 
     readonly List<GameObject> _generated = new(); // mountains
-    readonly List<GameObject> _spawned = new();   // player/ball
 
+
+#if UNITY_EDITOR
+    bool _prefabChecked;
+    bool _isPrefabAsset;
+
+    bool IsPrefabAsset()
+    {
+        if (!_prefabChecked)
+        {
+            _isPrefabAsset = !gameObject.scene.IsValid(); // true when editing the asset itself
+            _prefabChecked = true;
+        }
+        return _isPrefabAsset;
+    }
+#endif
+
+    // ------------- PUBLIC -------------
     [ContextMenu("Generate Now")]
     public void GenerateNow()
     {
+#if UNITY_EDITOR
+        if (!Application.isPlaying && IsPrefabAsset()) return; // don't touch prefab asset
+#endif
         Regenerate();
     }
 
+    // ------------- CORE BUILD -------------
     void Regenerate()
     {
+#if UNITY_EDITOR
+        if (!Application.isPlaying && IsPrefabAsset()) return;
+#endif
+
         if (useRandomSeed)
             seed = Random.Range(int.MinValue / 2, int.MaxValue / 2);
         Random.InitState(seed);
@@ -126,11 +157,10 @@ public class PerlinMountain2D : MonoBehaviour
                 col.SetPath(0, v2);
             }
 
-            // First mountain: align ground + spawn gameplay objects
             if (m == 0)
             {
                 AlignGroundToMountainStart(surface);
-                SpawnGameplayObjects();
+                SpawnGameplayObjects(); // this already checks Application.isPlaying
             }
 
             _generated.Add(mountainGO);
@@ -138,42 +168,33 @@ public class PerlinMountain2D : MonoBehaviour
         }
     }
 
-    // ----------------- HELPERS -----------------
+    // ------------- HELPERS -------------
     void ClearGenerated()
     {
-        // destroy mountains
+        // mountains
         for (int i = _generated.Count - 1; i >= 0; i--)
         {
             var go = _generated[i];
             if (!go) continue;
 
             if (Application.isPlaying)
-                Object.Destroy(go);
+                Destroy(go);
             else
-                Object.DestroyImmediate(go);
+                DestroyImmediate(go);
         }
         _generated.Clear();
 
-        // destroy previously spawned player/ball (if any)
-        for (int i = _spawned.Count - 1; i >= 0; i--)
-        {
-            var go = _spawned[i];
-            if (!go) continue;
+        
 
-            if (Application.isPlaying)
-                Object.Destroy(go);
-            else
-                Object.DestroyImmediate(go);
-        }
-        _spawned.Clear();
-
-        // Also clear any leftover children under this generator (safety)
+        // leftover children under this generator
         var toDestroy = new List<Transform>();
         foreach (Transform child in transform) toDestroy.Add(child);
         foreach (var t in toDestroy)
         {
-            if (Application.isPlaying) Object.Destroy(t.gameObject);
-            else Object.DestroyImmediate(t.gameObject);
+            if (Application.isPlaying)
+                Destroy(t.gameObject);
+            else
+                DestroyImmediate(t.gameObject);
         }
     }
 
@@ -220,14 +241,12 @@ public class PerlinMountain2D : MonoBehaviour
 
             if (useStairSteps)
             {
-                // horizontal segment at previous height
+                // horizontal, then vertical
                 pts.Add(new Vector3(x, prevY, 0f));
-                // vertical step to new height
                 pts.Add(new Vector3(x, y, 0f));
             }
             else
             {
-                // direct diagonal
                 pts.Add(new Vector3(x, y, 0f));
             }
 
@@ -244,8 +263,9 @@ public class PerlinMountain2D : MonoBehaviour
         poly.AddRange(surface);
 
         var last = surface[surface.Count - 1];
-        poly.Add(new Vector3(last.x, groundY, 0f));
         var first = surface[0];
+
+        poly.Add(new Vector3(last.x, groundY, 0f));
         poly.Add(new Vector3(first.x, groundY, 0f));
 
         return poly;
@@ -258,6 +278,8 @@ public class PerlinMountain2D : MonoBehaviour
 
         Vector3 localTop = surface[0];
         Vector3 worldTop = transform.TransformPoint(localTop);
+        Vector3 localBase = new Vector3(localTop.x, baseY, 0f);
+        Vector3 worldBase = transform.TransformPoint(localBase);
 
         Vector3 pos = groundRoot.position;
         pos.y = worldTop.y + groundYOffset;
@@ -265,50 +287,74 @@ public class PerlinMountain2D : MonoBehaviour
 
         if (scaleGroundHeight)
         {
-            Vector3 localBase = new Vector3(localTop.x, baseY, 0f);
-            Vector3 worldBase = transform.TransformPoint(localBase);
             float wallHeightWorld = worldTop.y - worldBase.y;
-
             Vector3 scale = groundRoot.localScale;
             scale.y = wallHeightWorld;
             groundRoot.localScale = scale;
         }
     }
 
-    // ---------- SPAWN PLAYER & BALL ----------
+    // ---------- MOVE EXISTING PLAYER & BALL ----------
     void SpawnGameplayObjects()
     {
-        // Only spawn while the game is running
-        if (!Application.isPlaying)
-            return;
+        // You can run this in edit mode too if you like,
+        // but if you ONLY want it at runtime, uncomment this:
+        // if (!Application.isPlaying) return;
 
-        if (playerSpawnPoint != null && playerPrefab != null)
+        //player1
+        // Move the existing player object
+        if (playerOneSpawnPoint != null && playerOnePrefab != null)
         {
-            var player = Object.Instantiate(
-                playerPrefab,
-                playerSpawnPoint.position,
-                playerSpawnPoint.rotation
-            );
-            _spawned.Add(player);
+            Transform t = playerOnePrefab.transform;
+            t.position = playerOneSpawnPoint.position;
+            t.rotation = playerOneSpawnPoint.rotation;
         }
 
-        if (ballSpawnPoint != null && ballPrefab != null)
+        // Move the existing ball object
+        if (ballOneSpawnPoint != null && ballOnePrefab != null)
         {
-            var ball = Object.Instantiate(
-                ballPrefab,
-                ballSpawnPoint.position,
-                ballSpawnPoint.rotation
-            );
-            _spawned.Add(ball);
+            Transform t = ballOnePrefab.transform;
+            t.position = ballOneSpawnPoint.position;
+            t.rotation = ballOneSpawnPoint.rotation;
+        }
+
+
+        //player2
+        // Move the existing player object
+        if (playerOneSpawnPoint != null && playerTwoPrefab != null)
+        {
+            Transform t = playerTwoPrefab.transform;
+            t.position = playerTwoSpawnPoint.position;
+            t.rotation = playerTwoSpawnPoint.rotation;
+        }
+
+        // Move the existing ball object
+        if (ballTwoSpawnPoint != null && ballTwoPrefab != null)
+        {
+            Transform t = ballTwoPrefab.transform;
+            t.position = ballTwoSpawnPoint.position;
+            t.rotation = ballTwoSpawnPoint.rotation;
         }
     }
-    // ----------------------------------------
 
+
+    // ------------- EDITOR LIFECYCLE -------------
     void OnEnable()
     {
 #if UNITY_EDITOR
+        if (!Application.isPlaying && IsPrefabAsset())
+            return;   // don't generate in prefab asset
+
         if (!Application.isPlaying)
-            EditorApplication.delayCall += () => { if (this) GenerateNow(); };
+        {
+            // regenerate once after inspector changes / enable
+            EditorApplication.delayCall += () =>
+            {
+                if (this == null) return;
+                if (IsPrefabAsset()) return;
+                GenerateNow();
+            };
+        }
 #endif
     }
 
@@ -316,9 +362,14 @@ public class PerlinMountain2D : MonoBehaviour
     void OnValidate()
     {
         if (!autoRegenerateOnValidate) return;
+        if (Application.isPlaying) return;
+        if (IsPrefabAsset()) return;
+
         EditorApplication.delayCall += () =>
         {
-            if (this) GenerateNow();
+            if (this == null) return;
+            if (IsPrefabAsset()) return;
+            GenerateNow();
         };
     }
 #endif
