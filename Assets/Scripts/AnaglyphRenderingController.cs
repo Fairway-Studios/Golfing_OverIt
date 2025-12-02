@@ -6,7 +6,7 @@ public class AnaglyphRenderingController : MonoBehaviour
     private float hueShift = 0f;
     private float saturationShift = 0.5f;
     private float valueShift = 1f;
-    private float opacityMultiplier = 1f;
+    private float opacityMultiplier = 0.4f;
 
     private SpriteRenderer[] allRenderers;
     private Color[] originalColors;

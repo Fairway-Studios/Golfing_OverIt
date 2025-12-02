@@ -1,7 +1,5 @@
-using System.Linq;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Audio;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(Rigidbody2D))]
@@ -34,6 +32,8 @@ public class InputController : MonoBehaviour
     public AudioClip[] hitSounds;
 
     private Rigidbody2D rb;
+    private CameraController cameraController;
+    private GameManager gameManager;
     private Vector2 moveInput;
     private Vector2 previousPosition;
     private PlayerInput playerInput;
@@ -45,11 +45,8 @@ public class InputController : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         playerInput = GetComponentInParent<PlayerInput>();
-
-        if (playerInput == null)
-        {
-            return;
-        }
+        cameraController = Object.FindFirstObjectByType<CameraController>();
+        gameManager = Object.FindFirstObjectByType<GameManager>();
 
         if (availableClubs != null && availableClubs.Length > 0)
         {
@@ -74,8 +71,7 @@ public class InputController : MonoBehaviour
         {
             if (playerIndex < gamepads.Count)
             {
-                var gamepad = gamepads[playerIndex];
-                playerInput.SwitchCurrentControlScheme("Controller", gamepad);
+                playerInput.SwitchCurrentControlScheme("Controller", gamepads[playerIndex]);
                 usingMouse = false;
             }
             else
@@ -99,75 +95,75 @@ public class InputController : MonoBehaviour
         previousPosition = rb.position;
     }
 
-    public void OnSwing(InputValue value)
+    public void OnSwing(InputAction.CallbackContext context)
     {
-        moveInput = value.Get<Vector2>();
+        moveInput = context.ReadValue<Vector2>();
     }
 
-    public void OnCycleClub(InputValue value)
+    public void OnCycleClub(InputAction.CallbackContext context)
     {
-        if (availableClubs == null || availableClubs.Length == 0) return;
+        if (context.performed && availableClubs != null && availableClubs.Length > 0)
+        {
+            currentClubIndex = (currentClubIndex + 1) % availableClubs.Length;
+            currentClub = availableClubs[currentClubIndex];
+            if (feedbackText != null)
+                feedbackText.text = "Current Club: " + currentClub.clubName;
+        }
+    }
 
-        currentClubIndex = (currentClubIndex + 1) % availableClubs.Length;
-        currentClub = availableClubs[currentClubIndex];
-        if (feedbackText != null)
-            feedbackText.text = "Current Club: " + currentClub.clubName;
+    public void OnMoveCamera(InputAction.CallbackContext context)
+    {
+        if (cameraController != null)
+            cameraController.OnCameraMove(context.ReadValue<Vector2>());
+    }
+
+    public void OnSelectBallA(InputAction.CallbackContext context)
+    {
+        bool held = (context.phase == InputActionPhase.Performed);
+        if (playerIndex == 0)
+            gameManager.OnPlayer1VoteA(held);
+        else if (playerIndex == 1)
+            gameManager.OnPlayer2VoteA(held);
+    }
+
+    public void OnSelectBallB(InputAction.CallbackContext context)
+    {
+        bool held = (context.phase == InputActionPhase.Performed);
+        if (playerIndex == 0)
+            gameManager.OnPlayer1VoteB(held);
+        else if (playerIndex == 1)
+            gameManager.OnPlayer2VoteB(held);
     }
 
     void FixedUpdate()
     {
-        if (playerOrigin == null) return;
-
         Vector2 currentVelocity = (rb.position - previousPosition) / Time.fixedDeltaTime;
 
         if (usingMouse)
-        {
             HandleMouseMovement();
-        }
         else
-        {
             HandleControllerMovement();
-        }
 
-        // Check if club has moved far enough to enable swinging
         if (!canSwing)
         {
-            GameObject ball = GameObject.FindGameObjectWithTag("GolfBall");
-            if (ball != null)
+            GolfBallController[] allBalls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
+
+            foreach (GolfBallController ball in allBalls)
             {
-                float distanceFromBall = Vector2.Distance(rb.position, ball.transform.position);
+                if (ball.GetOwnerIndex() != playerIndex)
+                    continue;
 
-                // Debug every frame when not ready
-                if (Time.frameCount % 30 == 0)
-                {
-                    Debug.Log($"[{transform.root.name}] NOT READY - Distance from ball: {distanceFromBall:F2}, need {readyDistance:F2}");
-                }
-
-                if (distanceFromBall > readyDistance)
+                float dist = Vector2.Distance(rb.position, ball.transform.position);
+                if (dist > readyDistance)
                 {
                     canSwing = true;
-                    Debug.Log($"[{transform.root.name}] SWING READY! Distance: {distanceFromBall:F2}");
+                    break;
                 }
-            }
-            else
-            {
-                Debug.LogWarning($"[{transform.root.name}] Can't find ball with tag 'GolfBall'!");
             }
         }
 
-        // Only check for ball hits if swing is ready
         if (canSwing)
-        {
             CheckBallHit(currentVelocity);
-        }
-        else
-        {
-            // Debug why we can't swing
-            if (Time.frameCount % 60 == 0)
-            {
-                Debug.Log($"[{transform.root.name}] Skipping CheckBallHit - canSwing is false");
-            }
-        }
 
         previousPosition = rb.position;
     }
@@ -182,112 +178,111 @@ public class InputController : MonoBehaviour
 
     private void HandleMouseMovement()
     {
-        if (Mouse.current == null) return;
-
-        Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue());
-        Vector2 targetPos = (Vector2)mouseWorldPos;
-        Vector2 direction = targetPos - (Vector2)playerOrigin.position;
+        Vector3 mouseWorld = Camera.main.ScreenToWorldPoint(Mouse.current.position.ReadValue());
+        Vector2 target = mouseWorld;
+        Vector2 direction = target - (Vector2)playerOrigin.position;
 
         if (direction.magnitude > maxDistance)
-        {
             direction = direction.normalized * maxDistance;
-        }
 
-        Vector2 clampedTarget = (Vector2)playerOrigin.position + direction;
-        Vector2 moveDelta = (clampedTarget - rb.position) * mouseSens;
-        rb.linearVelocity = moveDelta;
+        Vector2 clamped = (Vector2)playerOrigin.position + direction;
+        Vector2 delta = (clamped - rb.position) * mouseSens;
+        rb.linearVelocity = delta;
     }
 
     private void ClampToPlayerRadius()
     {
         Vector2 offset = rb.position - (Vector2)playerOrigin.position;
         if (offset.magnitude > maxDistance)
-        {
             rb.position = (Vector2)playerOrigin.position + offset.normalized * maxDistance;
-        }
     }
 
     private void CheckBallHit(Vector2 clubVelocity)
     {
-        GameObject ball = GameObject.FindGameObjectWithTag("GolfBall");
-        if (ball == null) return;
+        GolfBallController[] allBalls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
 
-        float distance = Vector2.Distance(rb.position, ball.transform.position);
-
-        if (distance < hitRadius)
+        foreach (GolfBallController ball in allBalls)
         {
-            float swingSpeed = clubVelocity.magnitude;
+            if (ball.GetOwnerIndex() != playerIndex)
+                continue;
 
-            if (swingSpeed >= minSwingSpeed)
+            if (ball.IsLocked())
+                continue;
+
+            float dist = Vector2.Distance(rb.position, ball.transform.position);
+            if (dist < hitRadius)
             {
-                Vector2 clampedVelocity = clubVelocity;
-                if (swingSpeed > maxSwingSpeed)
+                float swing = clubVelocity.magnitude;
+                if (swing >= minSwingSpeed)
                 {
-                    clampedVelocity = clubVelocity.normalized * maxSwingSpeed;
-                }
+                    Vector2 impulse = clubVelocity;
+                    if (swing > maxSwingSpeed)
+                        impulse = clubVelocity.normalized * maxSwingSpeed;
 
-                HitBall(ball, clampedVelocity);
+                    HitBall(ball.gameObject, impulse);
+                }
             }
         }
     }
 
-    private void HitBall(GameObject ball, Vector2 clubVelocity)
+    private void HitBall(GameObject ball, Vector2 velocity)
     {
         if (currentClub == null)
-        {
-            Debug.LogWarning("No club selected!");
             return;
-        }
 
         Rigidbody2D ballRb = ball.GetComponent<Rigidbody2D>();
-        if (ballRb != null && ballRb.linearVelocity.magnitude < 0.2)
+        if (ballRb != null && ballRb.linearVelocity.magnitude < 0.2f)
         {
-            Vector2 impulse = clubVelocity * currentClub.impulseMultiplier;
+            Vector2 impulse = velocity * currentClub.impulseMultiplier;
             impulse.y += Mathf.Abs(impulse.x) * currentClub.upwardBias;
 
             ballRb.AddForce(impulse, ForceMode2D.Impulse);
 
-            PlayRandomHitSound();
-
-            Debug.Log($"[{transform.root.name}] Ball hit! Swing disabled until moved away.");
+            PlayHitSound();
             canSwing = false;
         }
     }
 
-    void PlayRandomHitSound()
+    void PlayHitSound()
     {
-        if (hitSounds.Length == 0) return;
+        if (hitSounds.Length == 0)
+            return;
 
-        int index = Random.Range(0, hitSounds.Length);
-        AudioClip clip = hitSounds[index];
+        AudioClip clip;
+
+        if (currentClub.clubName == "Putter")
+            clip = hitSounds[0];
+        else
+            clip = hitSounds[Random.Range(1, hitSounds.Length)];
 
         SFXManager.Instance.PlaySFX(clip);
     }
 
-    // Called when player teleports
     public void OnPlayerTeleported()
     {
         rb.linearVelocity = Vector2.zero;
         rb.angularVelocity = 0f;
 
-        GameObject ball = GameObject.FindGameObjectWithTag("GolfBall");
-        if (ball != null)
-        {
-            float currentDistance = Vector2.Distance(rb.position, ball.transform.position);
+        GolfBallController[] allBalls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
 
+        foreach (GolfBallController ball in allBalls)
+        {
+            if (ball.GetOwnerIndex() != playerIndex)
+                continue;
+
+            float dist = Vector2.Distance(rb.position, ball.transform.position);
             Vector2 dir = (rb.position - (Vector2)ball.transform.position).normalized;
             if (dir.sqrMagnitude < 0.01f)
-                dir = Vector2.right; // fallback safety
+                dir = Vector2.right;
 
             rb.position = (Vector2)ball.transform.position + dir * (readyDistance + 0.5f);
-
-            Debug.Log(
-                $"[{transform.root.name}] TELEPORTED - " +
-                $"Club forced away from ball. New Distance: {Vector2.Distance(rb.position, ball.transform.position):F2}"
-            );
         }
 
-        // Disable swinging until movement reached
         canSwing = false;
+    }
+
+    public int GetPlayerIndex()
+    {
+        return playerIndex;
     }
 }

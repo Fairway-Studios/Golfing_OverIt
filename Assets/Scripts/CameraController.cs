@@ -21,12 +21,22 @@ public class CameraController : MonoBehaviour
     [Header("Horizontal Smoothing")]
     [SerializeField] private float horizontalSmoothTime = 0.3f;
 
+    [Header("Manual Camera Control")]
+    [SerializeField] private float manualMoveSpeed = 10f;
+    [SerializeField] private float returnToTrackingDelay = 0.5f;
+
     private Transform cameraFollowTarget;
     private Rigidbody2D ballRb;
     private Vector3 currentLookAhead;
     private float currentHeight;
     private float horizontalVelocity;
     private bool ballWasMoving = false;
+
+    // Manual control
+    private bool isManualControl = false;
+    private Vector2 manualInput = Vector2.zero;
+    private float lastManualInputTime = -999f;
+    private Vector3 manualCameraOffset = Vector3.zero;
 
     void Start()
     {
@@ -54,6 +64,13 @@ public class CameraController : MonoBehaviour
     {
         if (ball == null || cameraFollowTarget == null) return;
 
+        // Check if we should return to automatic tracking
+        if (isManualControl && Time.time - lastManualInputTime > returnToTrackingDelay)
+        {
+            isManualControl = false;
+            manualCameraOffset = Vector3.zero;
+        }
+
         UpdateCameraPosition();
     }
 
@@ -63,11 +80,25 @@ public class CameraController : MonoBehaviour
         float ballSpeed = ballVelocity.magnitude;
         bool ballIsMoving = ballSpeed > ballStoppedThreshold;
 
+        // Manual Camera Control
+        if (isManualControl)
+        {
+            // Move camera manually based on input
+            manualCameraOffset += new Vector3(manualInput.x, manualInput.y, 0) * manualMoveSpeed * Time.deltaTime;
+
+            Vector3 manualPosition = ball.position + manualCameraOffset;
+            manualPosition.z = 0;
+
+            cameraFollowTarget.position = manualPosition;
+            return;
+        }
+
+        // Automatic Camera Control
+
         // Calculate look-ahead based on ball's horizontal velocity
         float targetLookAhead = 0f;
         if (ballIsMoving)
         {
-            // Look ahead in direction of movement
             targetLookAhead = Mathf.Sign(ballVelocity.x) * lookAheadDistance;
             ballWasMoving = true;
         }
@@ -81,22 +112,17 @@ public class CameraController : MonoBehaviour
         float targetX = ball.position.x + currentLookAhead.x;
         float smoothX = Mathf.SmoothDamp(cameraFollowTarget.position.x, targetX, ref horizontalVelocity, horizontalSmoothTime);
 
-        // === VERTICAL POSITION ===
-
+        // Camera height control
         float targetHeight = baseHeight;
 
         if (ballIsMoving)
         {
-            // Ball is airborne and moving - follow it (with limit)
             float heightDifference = ball.position.y - baseHeight;
             targetHeight = baseHeight + Mathf.Min(heightDifference * 0.5f, maxHeightOffset);
-
-            // Follow upward quickly
             currentHeight = Mathf.Lerp(currentHeight, targetHeight, heightFollowSpeed * Time.deltaTime);
         }
         else
         {
-            // Ball stopped or on ground - return to base height
             currentHeight = Mathf.Lerp(currentHeight, baseHeight, heightReturnSpeed * Time.deltaTime);
 
             if (!ballIsMoving && ballWasMoving)
@@ -108,20 +134,34 @@ public class CameraController : MonoBehaviour
         cameraFollowTarget.position = new Vector3(smoothX, currentHeight, cameraFollowTarget.position.z);
     }
 
-    // Optional: Call this to reset camera when player teleports
-    public void ResetCamera(Vector3 newPosition)
+    // Called by InputController when manual camera control input is received
+    public void OnCameraMove(Vector2 input)
     {
-        if (cameraFollowTarget != null)
+        manualInput = input;
+
+        if (input.magnitude > 0.1f)
         {
-            cameraFollowTarget.position = new Vector3(newPosition.x, baseHeight, cameraFollowTarget.position.z);
-            currentHeight = baseHeight;
-            currentLookAhead = Vector3.zero;
-            horizontalVelocity = 0f;
+            if (!isManualControl)
+            {
+                // Switching to manual control - record current offset
+                manualCameraOffset = cameraFollowTarget.position - ball.position;
+                isManualControl = true;
+            }
+
+            lastManualInputTime = Time.time;
         }
     }
 
     public void SetBaseHeight(float newHeight)
     {
         baseHeight = newHeight;
+    }
+
+    // Force return to automatic tracking
+    public void ResetToAutomatic()
+    {
+        isManualControl = false;
+        manualCameraOffset = Vector3.zero;
+        manualInput = Vector2.zero;
     }
 }

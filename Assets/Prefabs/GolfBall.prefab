@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 3861698409318400509}
   - component: {fileID: 5014335363288744799}
   - component: {fileID: 6541541978057945933}
+  - component: {fileID: 5135398625676989744}
   m_Layer: 0
   m_Name: GolfBall
   m_TagString: GolfBall
@@ -76,11 +77,11 @@ SpriteRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
+  m_SortingLayerID: 935740509
+  m_SortingLayer: 1
   m_SortingOrder: 0
   m_Sprite: {fileID: -2413806693520163455, guid: a86470a33a6bf42c4b3595704624658b, type: 3}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0, g: 0, b: 0, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -112,7 +113,7 @@ Rigidbody2D:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 64
   m_Interpolate: 1
   m_SleepingMode: 1
   m_CollisionDetection: 1
@@ -133,7 +134,7 @@ CircleCollider2D:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 64
   m_LayerOverridePriority: 0
   m_ForceSendLayers:
     serializedVersion: 2
@@ -165,8 +166,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8542627a44e92d54c9a9101111521d7b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stoppedVelocityThreshold: 0.5
-  stoppedCheckDuration: 1
-  player: {fileID: 0}
-  cameraTransform: {fileID: 0}
-  playerOffsetFromBall: {x: -0.1, y: 1.45, z: 0}
+  ownerPlayerIndex: 0
+  stoppedVelocityThreshold: 1.5
+  stoppedCheckDuration: 2
+--- !u!114 &5135398625676989744
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3491301912689170450}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f2ec213990454b45bac47cf08d483b9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  indicatorUI: {fileID: 0}
+  label: {fileID: 0}
+  icon: {fileID: 0}
