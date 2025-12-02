@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Club
   - GolfBall
+  - FinishFloor
   layers:
   - Default
   - TransparentFX
