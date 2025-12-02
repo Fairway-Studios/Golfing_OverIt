@@ -57,7 +57,7 @@ MonoBehaviour:
   ballStoppedThreshold: 0.5
   horizontalSmoothTime: 1
   manualMoveSpeed: 12
-  returnToTrackingDelay: 2
+  returnToTrackingDelay: 1
 --- !u!1 &6729512101064381820
 GameObject:
   m_ObjectHideFlags: 0
