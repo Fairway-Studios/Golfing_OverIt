@@ -4,8 +4,6 @@ using TMPro;
 public class GameManager : MonoBehaviour
 {
     [Header("References")]
-    [SerializeField] private Transform[] players;
-    [SerializeField] private Transform cameraTransform;
     [SerializeField] private CameraController cameraController;
     [SerializeField] private Vector3 playerOffsetFromBall = new Vector3(-0.1f, 1.45f, 0f);
 
@@ -17,12 +15,10 @@ public class GameManager : MonoBehaviour
     [SerializeField] private bool forceMultiplayerMode = false;
 
     private bool selectionActive = false;
-
     private bool player1VotedA = false;
     private bool player1VotedB = false;
     private bool player2VotedA = false;
     private bool player2VotedB = false;
-
     private bool isMultiplayer = false;
 
     [Header("Ball Indicators")]
@@ -30,9 +26,14 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Transform indicatorParent;
 
     private BallIndicator[] ballIndicators;
+    private Transform[] players;
+    private Transform cameraTransform;
 
     void Start()
     {
+        FindPlayers();
+        FindCamera();
+
         if (selectionUI != null)
             selectionUI.SetActive(false);
 
@@ -40,10 +41,34 @@ public class GameManager : MonoBehaviour
         SetupBallIndicators();
     }
 
+    void FindPlayers()
+    {
+        InputController[] controllers = Object.FindObjectsByType<InputController>(FindObjectsSortMode.None);
+        players = new Transform[controllers.Length];
+
+        for (int i = 0; i < controllers.Length; i++)
+        {
+            players[i] = controllers[i].transform.root;
+        }
+    }
+
+    void FindCamera()
+    {
+        if (Camera.main != null)
+        {
+            cameraTransform = Camera.main.transform;
+        }
+
+        if (cameraController == null)
+        {
+            cameraController = Object.FindFirstObjectByType<CameraController>();
+        }
+    }
+
     void DetectGameMode()
     {
-        InputController[] players = Object.FindObjectsByType<InputController>(FindObjectsSortMode.None);
         isMultiplayer = (players.Length >= 2) || forceMultiplayerMode;
+        Debug.Log($"Game Mode: {(isMultiplayer ? "Multiplayer" : "Single Player")} - {players.Length} players found");
     }
 
     void Update()
@@ -62,7 +87,10 @@ public class GameManager : MonoBehaviour
     void SetupBallIndicators()
     {
         if (ballIndicatorPrefab == null || indicatorParent == null)
+        {
+            Debug.LogWarning("Ball indicator prefab or parent not assigned!");
             return;
+        }
 
         GolfBallController[] balls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
         ballIndicators = new BallIndicator[balls.Length];
@@ -137,8 +165,16 @@ public class GameManager : MonoBehaviour
     {
         selectionActive = true;
 
-        foreach (var ind in ballIndicators)
-            ind?.Show();
+        if (ballIndicators != null)
+        {
+            foreach (var ind in ballIndicators)
+            {
+                if (ind != null)
+                {
+                    ind.Show();
+                }
+            }
+        }
 
         if (selectionUI != null)
         {
@@ -150,8 +186,7 @@ public class GameManager : MonoBehaviour
     // PLAYER 1 INPUT
     public void OnPlayer1VoteA(bool held)
     {
-        if (!selectionActive)
-            return;
+        if (!selectionActive) return;
         player1VotedA = held;
         if (held) player1VotedB = false;
         UpdatePrompt();
@@ -159,8 +194,7 @@ public class GameManager : MonoBehaviour
 
     public void OnPlayer1VoteB(bool held)
     {
-        if (!selectionActive)
-            return;
+        if (!selectionActive) return;
         player1VotedB = held;
         if (held) player1VotedA = false;
         UpdatePrompt();
@@ -169,8 +203,7 @@ public class GameManager : MonoBehaviour
     // PLAYER 2 INPUT
     public void OnPlayer2VoteA(bool held)
     {
-        if (!selectionActive)
-            return;
+        if (!selectionActive) return;
         player2VotedA = held;
         if (held) player2VotedB = false;
         UpdatePrompt();
@@ -178,8 +211,7 @@ public class GameManager : MonoBehaviour
 
     public void OnPlayer2VoteB(bool held)
     {
-        if (!selectionActive)
-            return;
+        if (!selectionActive) return;
         player2VotedB = held;
         if (held) player2VotedA = false;
         UpdatePrompt();
@@ -213,8 +245,15 @@ public class GameManager : MonoBehaviour
 
     void TeleportToBall(int ownerIndex)
     {
-        foreach (var ind in ballIndicators)
-            ind?.Hide();
+        // Hide indicators
+        if (ballIndicators != null)
+        {
+            foreach (var ind in ballIndicators)
+            {
+                if (ind != null)
+                    ind.Hide();
+            }
+        }
 
         GolfBallController[] allBalls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
         GolfBallController chosen = null;
@@ -238,7 +277,8 @@ public class GameManager : MonoBehaviour
 
         for (int i = 0; i < players.Length; i++)
         {
-            players[i].position = pos + playerOffsetFromBall;
+            if (players[i] != null)
+                players[i].position = pos + playerOffsetFromBall;
         }
 
         foreach (var ball in allBalls)

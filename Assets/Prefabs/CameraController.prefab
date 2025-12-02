@@ -52,7 +52,7 @@ MonoBehaviour:
   lookAheadDistance: 4
   lookAheadSmoothing: 2
   maxHeightOffset: 5
-  heightFollowSpeed: 2
+  heightFollowSpeed: 1
   heightReturnSpeed: 1
   ballStoppedThreshold: 0.5
   horizontalSmoothTime: 1

@@ -13,8 +13,8 @@ public class CameraController : MonoBehaviour
     [SerializeField] private float lookAheadSmoothing = 5f;
 
     [Header("Vertical Tracking")]
-    [SerializeField] private float maxHeightOffset = 5f;
-    [SerializeField] private float heightFollowSpeed = 2f;
+    [SerializeField] private float maxHeightOffset = 5f; 
+    [SerializeField] private float heightFollowSpeed = 1f;
     [SerializeField] private float heightReturnSpeed = 1f;
     [SerializeField] private float ballStoppedThreshold = 0.5f;
 
@@ -28,8 +28,8 @@ public class CameraController : MonoBehaviour
     private Transform cameraFollowTarget;
     private Rigidbody2D ballRb;
     private Vector3 currentLookAhead;
-    private float currentHeight;
     private float horizontalVelocity;
+    private float verticalVelocity;
     private bool ballWasMoving = false;
 
     // Manual control
@@ -42,21 +42,17 @@ public class CameraController : MonoBehaviour
     {
         GameObject targetObj = new GameObject("CameraTarget");
         cameraFollowTarget = targetObj.transform;
-
         if (virtualCamera != null)
         {
             virtualCamera.Follow = cameraFollowTarget;
         }
-
         if (ball != null)
         {
             ballRb = ball.GetComponent<Rigidbody2D>();
-            currentHeight = baseHeight;
         }
-
         if (cameraFollowTarget != null && ball != null)
         {
-            cameraFollowTarget.position = new Vector3(ball.position.x, baseHeight, 0);
+            cameraFollowTarget.position = new Vector3(ball.position.x, ball.position.y, 0);
         }
     }
 
@@ -64,7 +60,7 @@ public class CameraController : MonoBehaviour
     {
         if (ball == null || cameraFollowTarget == null) return;
 
-        // Check if we should return to automatic tracking
+        // Check if automatic tracking should resume
         if (isManualControl && Time.time - lastManualInputTime > returnToTrackingDelay)
         {
             isManualControl = false;
@@ -85,60 +81,47 @@ public class CameraController : MonoBehaviour
         {
             // Move camera manually based on input
             manualCameraOffset += new Vector3(manualInput.x, manualInput.y, 0) * manualMoveSpeed * Time.deltaTime;
-
             Vector3 manualPosition = ball.position + manualCameraOffset;
             manualPosition.z = 0;
-
             cameraFollowTarget.position = manualPosition;
             return;
         }
 
-        // Automatic Camera Control
-
-        // Calculate look-ahead based on ball's horizontal velocity
-        float targetLookAhead = 0f;
+        Vector2 targetLookAhead = Vector2.zero;
         if (ballIsMoving)
         {
-            targetLookAhead = Mathf.Sign(ballVelocity.x) * lookAheadDistance;
+            targetLookAhead = ballVelocity.normalized * lookAheadDistance;
             ballWasMoving = true;
         }
         else if (ballWasMoving)
         {
-            targetLookAhead = currentLookAhead.x;
+            targetLookAhead = Vector2.zero;
         }
 
-        currentLookAhead.x = Mathf.Lerp(currentLookAhead.x, targetLookAhead, lookAheadSmoothing * Time.deltaTime);
+        currentLookAhead.x = Mathf.Lerp(currentLookAhead.x, targetLookAhead.x, lookAheadSmoothing * Time.deltaTime);
+        currentLookAhead.y = Mathf.Lerp(currentLookAhead.y, targetLookAhead.y, lookAheadSmoothing * Time.deltaTime);
 
-        float targetX = ball.position.x + currentLookAhead.x;
-        float smoothX = Mathf.SmoothDamp(cameraFollowTarget.position.x, targetX, ref horizontalVelocity, horizontalSmoothTime);
+        Vector3 targetPos = ball.position + currentLookAhead;
+        targetPos.y = Mathf.Clamp(targetPos.y, baseHeight, baseHeight + maxHeightOffset);
+        targetPos.z = 0;
 
-        // Camera height control
-        float targetHeight = baseHeight;
+        float smoothX = Mathf.SmoothDamp(cameraFollowTarget.position.x, targetPos.x, ref horizontalVelocity, horizontalSmoothTime);
 
-        if (ballIsMoving)
+        float verticalSmoothTime = ballIsMoving ? (1f / heightFollowSpeed) : (1f / heightReturnSpeed);
+        float smoothY = Mathf.SmoothDamp(cameraFollowTarget.position.y, targetPos.y, ref verticalVelocity, verticalSmoothTime);
+
+        cameraFollowTarget.position = new Vector3(smoothX, smoothY, 0);
+
+        if (!ballIsMoving && ballWasMoving)
         {
-            float heightDifference = ball.position.y - baseHeight;
-            targetHeight = baseHeight + Mathf.Min(heightDifference * 0.5f, maxHeightOffset);
-            currentHeight = Mathf.Lerp(currentHeight, targetHeight, heightFollowSpeed * Time.deltaTime);
+            ballWasMoving = false;
         }
-        else
-        {
-            currentHeight = Mathf.Lerp(currentHeight, baseHeight, heightReturnSpeed * Time.deltaTime);
-
-            if (!ballIsMoving && ballWasMoving)
-            {
-                ballWasMoving = false;
-            }
-        }
-
-        cameraFollowTarget.position = new Vector3(smoothX, currentHeight, cameraFollowTarget.position.z);
     }
 
     // Called by InputController when manual camera control input is received
     public void OnCameraMove(Vector2 input)
     {
         manualInput = input;
-
         if (input.magnitude > 0.1f)
         {
             if (!isManualControl)
@@ -147,7 +130,6 @@ public class CameraController : MonoBehaviour
                 manualCameraOffset = cameraFollowTarget.position - ball.position;
                 isManualControl = true;
             }
-
             lastManualInputTime = Time.time;
         }
     }

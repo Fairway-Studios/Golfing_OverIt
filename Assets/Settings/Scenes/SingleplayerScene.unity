@@ -316,6 +316,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: PlayerTwo
       objectReference: {fileID: 0}
+    - target: {fileID: 4107313673102670305, guid: 269656326e1414d4981fa2a6e1817baf, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5370575747530327701, guid: 269656326e1414d4981fa2a6e1817baf, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.001455903
@@ -491,6 +495,10 @@ PrefabInstance:
     - target: {fileID: 3491301912689170450, guid: 17ef4bf9551b3b541921829678302120, type: 3}
       propertyPath: m_Name
       value: GolfBallTwo
+      objectReference: {fileID: 0}
+    - target: {fileID: 3491301912689170450, guid: 17ef4bf9551b3b541921829678302120, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5213659000339167030, guid: 17ef4bf9551b3b541921829678302120, type: 3}
       propertyPath: m_LocalPosition.x

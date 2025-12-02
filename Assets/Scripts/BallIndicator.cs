@@ -83,6 +83,7 @@ public class BallIndicator : MonoBehaviour
             arrowImage.enabled = true;
             Vector2 direction = (Vector2)screenPos - clamped;
 
+            // Calculate Arrow direction to point at off screen ball
             float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
             arrowImage.transform.localRotation = Quaternion.Euler(0, 0, angle - 90);
         }
