@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Club
   - GolfBall
+  - FinishFloor
   layers:
   - Default
   - TransparentFX
@@ -13,7 +14,7 @@ TagManager:
   - Environment
   - Water
   - UI
-  - 
+  - Balls
   - 
   - 
   - 
@@ -42,6 +43,9 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: Ball
+    uniqueID: 935740509
     locked: 0
   m_RenderingLayers:
   - Default

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class WinZone : MonoBehaviour
+public class WinZoneController : MonoBehaviour
 {
     [Header("UI")]
     public GameObject winUI;
