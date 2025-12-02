@@ -85,6 +85,11 @@ public class GolfBallController : MonoBehaviour
         return rb;
     }
 
+    public SpriteRenderer GetSpriteRenderer()
+    {
+        return this.GetComponentInParent<SpriteRenderer>();
+    }
+
     public bool IsStopped()
     {
         return hasStopped;

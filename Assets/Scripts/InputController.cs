@@ -40,6 +40,7 @@ public class InputController : MonoBehaviour
     private bool usingMouse = false;
     private GolfClubSettings currentClub;
     private bool canSwing = true;
+    private GolfBallController[] allBalls;
 
     void Awake()
     {
@@ -55,7 +56,9 @@ public class InputController : MonoBehaviour
                 feedbackText.text = "Current Club: " + currentClub.clubName;
         }
 
-        AssignDevice();
+         allBalls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
+
+            AssignDevice();
     }
 
     void AssignDevice()
@@ -146,8 +149,6 @@ public class InputController : MonoBehaviour
 
         if (!canSwing)
         {
-            GolfBallController[] allBalls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
-
             foreach (GolfBallController ball in allBalls)
             {
                 if (ball.GetOwnerIndex() != playerIndex)
@@ -199,8 +200,6 @@ public class InputController : MonoBehaviour
 
     private void CheckBallHit(Vector2 clubVelocity)
     {
-        GolfBallController[] allBalls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
-
         foreach (GolfBallController ball in allBalls)
         {
             if (ball.GetOwnerIndex() != playerIndex)
@@ -239,6 +238,11 @@ public class InputController : MonoBehaviour
             ballRb.AddForce(impulse, ForceMode2D.Impulse);
 
             PlayHitSound();
+
+            // TESTING change ball color to black on hit
+            SpriteRenderer ballRenderer = ball.GetComponent<SpriteRenderer>();
+            ballRenderer.color = Color.black;
+
             canSwing = false;
         }
     }
@@ -263,12 +267,18 @@ public class InputController : MonoBehaviour
         rb.linearVelocity = Vector2.zero;
         rb.angularVelocity = 0f;
 
-        GolfBallController[] allBalls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
+
 
         foreach (GolfBallController ball in allBalls)
         {
             if (ball.GetOwnerIndex() != playerIndex)
                 continue;
+
+            // TESTING anaglyph rendering for golf ball
+            SpriteRenderer ballRenderer = ball.GetSpriteRenderer();
+            SpriteRenderer clubRenderer = this.GetComponent<SpriteRenderer>();
+            Color color = clubRenderer.color;
+            ballRenderer.color = color;
 
             float dist = Vector2.Distance(rb.position, ball.transform.position);
             Vector2 dir = (rb.position - (Vector2)ball.transform.position).normalized;
