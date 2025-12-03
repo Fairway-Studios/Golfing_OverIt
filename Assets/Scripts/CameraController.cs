@@ -49,6 +49,9 @@ public class CameraController : MonoBehaviour
         if (ball != null)
         {
             ballRb = ball.GetComponent<Rigidbody2D>();
+
+            //set the balls position at game start 
+            baseHeight = ball.position.y;
         }
         if (cameraFollowTarget != null && ball != null)
         {
