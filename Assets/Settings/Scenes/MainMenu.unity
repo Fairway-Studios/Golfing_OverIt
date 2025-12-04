@@ -665,6 +665,26 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5000075438953506354, guid: 003c74d9facee284db07da88623dcf46, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 3433200915844963058}
+    - target: {fileID: 5000075438953506354, guid: 003c74d9facee284db07da88623dcf46, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: LoadSceneByName
+      objectReference: {fileID: 0}
+    - target: {fileID: 6744149200931907627, guid: 003c74d9facee284db07da88623dcf46, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6744149200931907627, guid: 003c74d9facee284db07da88623dcf46, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 3433200915844963058}
+    - target: {fileID: 6744149200931907627, guid: 003c74d9facee284db07da88623dcf46, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: ToggleSettings
+      objectReference: {fileID: 0}
     - target: {fileID: 8005343908001205019, guid: 003c74d9facee284db07da88623dcf46, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -728,6 +748,14 @@ PrefabInstance:
     - target: {fileID: 8542218873375256518, guid: 003c74d9facee284db07da88623dcf46, type: 3}
       propertyPath: m_Name
       value: MainMenuUI
+      objectReference: {fileID: 0}
+    - target: {fileID: 9109313924198112676, guid: 003c74d9facee284db07da88623dcf46, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 3433200915844963058}
+    - target: {fileID: 9109313924198112676, guid: 003c74d9facee284db07da88623dcf46, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: LoadSceneByName
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -807,6 +835,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: a3be9a04b20a8cc4795020fcbd21a536, type: 3}
+--- !u!114 &3433200915844963058 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2941712191160758628, guid: a3be9a04b20a8cc4795020fcbd21a536, type: 3}
+  m_PrefabInstance: {fileID: 3433200915844963057}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db6e9c2d9564ae144b0eda06621bed9b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &3681858860933302757
 PrefabInstance:
   m_ObjectHideFlags: 0
