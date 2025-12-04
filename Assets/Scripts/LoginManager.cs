@@ -1,7 +1,8 @@
 using UnityEngine;
-using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
+using PlayFab;
+using PlayFab.ClientModels;
 
 public class LoginManager : MonoBehaviour
 {
@@ -9,49 +10,72 @@ public class LoginManager : MonoBehaviour
     public TMP_InputField passwordInput;
     public TextMeshProUGUI feedbackText;
 
-    private string savedUsernameKey = "SavedUsername";
-    private string savedPasswordKey = "SavedPassword";
+    // NOTE: PlayerPrefs keys are no longer needed
 
     public void Login()
     {
-        string inputUser = usernameInput.text;
-        string inputPass = passwordInput.text;
-
-        string savedUser = PlayerPrefs.GetString(savedUsernameKey, "");
-        string savedPass = PlayerPrefs.GetString(savedPasswordKey, "");
-
-        if (string.IsNullOrEmpty(savedUser) || string.IsNullOrEmpty(savedPass))
+        if (string.IsNullOrEmpty(usernameInput.text) || string.IsNullOrEmpty(passwordInput.text))
         {
-            feedbackText.text = "No account found. Please create one first.";
+            feedbackText.text = "Please enter both username and password!";
             return;
         }
 
-        if (inputUser == savedUser && inputPass == savedPass)
+        feedbackText.text = "Connecting to server...";
+
+        var request = new LoginWithPlayFabRequest()
         {
-            feedbackText.text = "Login successful!";
-            SceneManager.LoadScene("MainMenu"); // Load the menu in your screenshot
-        }
-        else
-        {
-            feedbackText.text = "Invalid username or password!";
-        }
+            Username = usernameInput.text,
+            Password = passwordInput.text,
+        };
+
+        // PlayFabClientAPI.LoginWithPlayFab takes the request, a Success Callback, and an Error Callback.
+
+        PlayFabClientAPI.LoginWithPlayFab(request, OnLoginSuccess, OnPlayFabError);
     }
 
     public void CreateAccount()
     {
-        string newUser = usernameInput.text;
-        string newPass = passwordInput.text;
-
-        if (string.IsNullOrEmpty(newUser) || string.IsNullOrEmpty(newPass))
+        if (string.IsNullOrEmpty(usernameInput.text) || string.IsNullOrEmpty(passwordInput.text))
         {
-            feedbackText.text = "Username or password cannot be empty!";
+            feedbackText.text = "Please enter both username and password!";
             return;
         }
 
-        PlayerPrefs.SetString(savedUsernameKey, newUser);
-        PlayerPrefs.SetString(savedPasswordKey, newPass);
-        PlayerPrefs.Save();
+        var request = new RegisterPlayFabUserRequest
+        {
+            Username = usernameInput.text,
+            Password = passwordInput.text,
+            RequireBothUsernameAndEmail = false
+        };
 
-        feedbackText.text = "Account created successfully!";
+        PlayFabClientAPI.RegisterPlayFabUser(request, OnRegisterSuccess, OnPlayFabError);
+    }
+
+    // CallbacK Methods (Sucess and Error)
+
+    // This executes Only if the Playfab serverconfirms a successful login
+
+    private void OnLoginSuccess(LoginResult result)
+    {
+        feedbackText.text = "Login Successful! Player ID: " + result.PlayFabId;
+        Debug.Log("Successfully logged in with PlayFab ID: " + result.PlayFabId);
+
+        // Load the main game scene after successful login
+        SceneManager.LoadScene("MainMenu");
+    }
+
+    // This is only executed if PlayFab server confirms successful account creation.
+
+    private void OnRegisterSuccess(RegisterPlayFabUserResult result)
+    {
+        feedbackText.text = "Account Created Successfully!";
+
+        Login(); // Automatically log in after account creation
+    }
+
+    private void OnPlayFabError(PlayFabError error)
+    {
+        feedbackText.text = "Login Error: " + error.ErrorMessage;
+        Debug.LogError("PlayFab Error Report: " + error.GenerateErrorReport());
     }
 }
