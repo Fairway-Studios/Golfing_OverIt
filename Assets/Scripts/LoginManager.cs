@@ -1,16 +1,70 @@
 using UnityEngine;
 using TMPro;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using PlayFab;
 using PlayFab.ClientModels;
+using System.Data.SqlTypes;
 
 public class LoginManager : MonoBehaviour
 {
+    [Header("UI Components")]
     public TMP_InputField usernameInput;
     public TMP_InputField passwordInput;
     public TextMeshProUGUI feedbackText;
 
-    // NOTE: PlayerPrefs keys are no longer needed
+    [Header("Buttons")]
+    public Button loginButton;
+    public Button createAccountButton;
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            SelectNextElement();
+        }
+
+        if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+        {
+            GameObject currentSelection = EventSystem.current.currentSelectedGameObject;
+
+            if (currentSelection == createAccountButton.gameObject)
+            {
+                CreateAccount();
+            }
+            else
+            {
+                Login();
+            }
+        }
+    }
+
+    private void SelectNextElement()
+    {
+        GameObject current = EventSystem.current.currentSelectedGameObject;
+
+        if (current == usernameInput.gameObject)
+        {
+            passwordInput.Select();
+        }
+        else if (current == passwordInput.gameObject)
+        {
+            loginButton.Select();
+        }
+        else if (current == loginButton.gameObject)
+        {
+            createAccountButton.Select();
+        }
+        else if (current == createAccountButton.gameObject)
+        {
+            usernameInput.Select();
+        }
+        else
+        {
+            usernameInput.Select(); // if nothing is selected, start with username input
+        }
+    }
 
     public void Login()
     {
@@ -69,13 +123,19 @@ public class LoginManager : MonoBehaviour
     private void OnRegisterSuccess(RegisterPlayFabUserResult result)
     {
         feedbackText.text = "Account Created Successfully!";
-
-        Login(); // Automatically log in after account creation
     }
 
     private void OnPlayFabError(PlayFabError error)
     {
-        feedbackText.text = "Login Error: " + error.ErrorMessage;
+        if (error.Error == PlayFabErrorCode.UsernameNotAvailable)
+        {
+            feedbackText.text = "That Account Already Exists!";
+        }
+        else
+        {
+            feedbackText.text = "Error: " + error.ErrorMessage;
+        }
+
         Debug.LogError("PlayFab Error Report: " + error.GenerateErrorReport());
     }
 }

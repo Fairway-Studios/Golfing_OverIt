@@ -663,6 +663,8 @@ MonoBehaviour:
   usernameInput: {fileID: 1948184844}
   passwordInput: {fileID: 1882681256}
   feedbackText: {fileID: 141587043}
+  loginButton: {fileID: 285926565}
+  createAccountButton: {fileID: 402197746}
 --- !u!1 &402197744
 GameObject:
   m_ObjectHideFlags: 0
@@ -1776,8 +1778,8 @@ MonoBehaviour:
   m_VerticalScrollbarEventHandler: {fileID: 0}
   m_LayoutGroup: {fileID: 0}
   m_ScrollSensitivity: 1
-  m_ContentType: 0
-  m_InputType: 0
+  m_ContentType: 7
+  m_InputType: 2
   m_AsteriskChar: 42
   m_KeyboardType: 0
   m_LineType: 0
