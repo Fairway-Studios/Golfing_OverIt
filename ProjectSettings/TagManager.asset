@@ -45,6 +45,12 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: Anaglyph
+    uniqueID: 1799204839
+    locked: 0
+  - name: Player
+    uniqueID: 1451835523
+    locked: 0
   - name: Ball
     uniqueID: 935740509
     locked: 0
