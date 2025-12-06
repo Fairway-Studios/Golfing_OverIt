@@ -240,8 +240,8 @@ public class InputController : MonoBehaviour
             PlayHitSound();
 
             // TESTING change ball color to black on hit
-            SpriteRenderer ballRenderer = ball.GetComponent<SpriteRenderer>();
-            ballRenderer.color = Color.black;
+            /*SpriteRenderer ballRenderer = ball.GetComponent<SpriteRenderer>();
+            ballRenderer.color = Color.black;*/
 
             canSwing = false;
         }
@@ -275,10 +275,10 @@ public class InputController : MonoBehaviour
                 continue;
 
             // TESTING anaglyph rendering for golf ball
-            SpriteRenderer ballRenderer = ball.GetSpriteRenderer();
+            /*SpriteRenderer ballRenderer = ball.GetSpriteRenderer();
             SpriteRenderer clubRenderer = this.GetComponent<SpriteRenderer>();
             Color color = clubRenderer.color;
-            ballRenderer.color = color;
+            ballRenderer.color = color;*/
 
             float dist = Vector2.Distance(rb.position, ball.transform.position);
             Vector2 dir = (rb.position - (Vector2)ball.transform.position).normalized;
