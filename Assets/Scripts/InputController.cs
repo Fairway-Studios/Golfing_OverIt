@@ -56,9 +56,9 @@ public class InputController : MonoBehaviour
                 feedbackText.text = "Current Club: " + currentClub.clubName;
         }
 
-         allBalls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
+        allBalls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
 
-            AssignDevice();
+        AssignDevice();
     }
 
     void AssignDevice()
@@ -239,9 +239,11 @@ public class InputController : MonoBehaviour
 
             PlayHitSound();
 
-            // TESTING change ball color to black on hit
-            /*SpriteRenderer ballRenderer = ball.GetComponent<SpriteRenderer>();
-            ballRenderer.color = Color.black;*/
+            // Notify camera that this player has swung
+            if (cameraController != null)
+            {
+                cameraController.OnPlayerSwung(playerIndex);
+            }
 
             canSwing = false;
         }
@@ -267,18 +269,10 @@ public class InputController : MonoBehaviour
         rb.linearVelocity = Vector2.zero;
         rb.angularVelocity = 0f;
 
-
-
         foreach (GolfBallController ball in allBalls)
         {
             if (ball.GetOwnerIndex() != playerIndex)
                 continue;
-
-            // TESTING anaglyph rendering for golf ball
-            /*SpriteRenderer ballRenderer = ball.GetSpriteRenderer();
-            SpriteRenderer clubRenderer = this.GetComponent<SpriteRenderer>();
-            Color color = clubRenderer.color;
-            ballRenderer.color = color;*/
 
             float dist = Vector2.Distance(rb.position, ball.transform.position);
             Vector2 dir = (rb.position - (Vector2)ball.transform.position).normalized;

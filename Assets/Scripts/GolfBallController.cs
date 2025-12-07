@@ -6,8 +6,8 @@ public class GolfBallController : MonoBehaviour
     [SerializeField] private int ownerPlayerIndex = 0;
 
     [Header("Stop Detection")]
-    [SerializeField] private float stoppedVelocityThreshold = 0.2f;
-    [SerializeField] private float stoppedCheckDuration = 0.5f;
+    [SerializeField] private float stoppedVelocityThreshold = 1.5f;
+    [SerializeField] private float stoppedCheckDuration = 2f;
 
     private Rigidbody2D rb;
     private float timeStationary = 0f;
@@ -44,8 +44,12 @@ public class GolfBallController : MonoBehaviour
 
             if (timeStationary >= stoppedCheckDuration && !hasStopped)
             {
-                rb.linearVelocity = Vector2.zero;
                 hasStopped = true;
+
+                // Freeze ball position and velocity to prevent glitch bounce
+                rb.linearVelocity = Vector2.zero;
+                rb.angularVelocity = 0f;
+                rb.position = rb.position;
 
                 if (hasRecordedHitStart)
                 {

@@ -48,16 +48,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ball: {fileID: 0}
   virtualCamera: {fileID: 4702101774646360849}
-  baseHeight: 0
   lookAheadDistance: 4
-  lookAheadSmoothing: 2
-  maxHeightOffset: 10
-  heightFollowSpeed: 1
-  heightReturnSpeed: 5
-  ballStoppedThreshold: 0.5
-  horizontalSmoothTime: 1
+  lookAheadSmoothing: 4
+  verticalDeadzone: 5
+  verticalSmoothTime: 0.18
+  horizontalSmoothTime: 0.18
   manualMoveSpeed: 15
   returnToTrackingDelay: 1
+  waitForBothPlayers: 1
+  preSwingCameraOffset: {x: 4, y: 1, z: 0}
 --- !u!1 &6729512101064381820
 GameObject:
   m_ObjectHideFlags: 0

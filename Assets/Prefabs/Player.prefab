@@ -991,6 +991,22 @@ MonoBehaviour:
         m_CallState: 2
     m_ActionId: 42e7da9f-6cf9-40a6-8c30-4921d5fec21f
     m_ActionName: 'Gameplay/MoveCamera[/XInputControllerWindows/rightStick,/XInputControllerWindows1/rightStick]'
+  - m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 878932701951817116}
+        m_TargetAssemblyTypeName: InputController, Assembly-CSharp
+        m_MethodName: OnCycleCamTarget
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 0
+    m_ActionId: 23c07cbe-bd4c-4b57-8046-a28bff1a54c1
+    m_ActionName: 'Gameplay/CycleCamTarget[/XInputControllerWindows/buttonNorth,/XInputControllerWindows1/buttonNorth]'
   m_NeverAutoSwitchControlSchemes: 0
   m_DefaultControlScheme: Controller
   m_DefaultActionMap: Gameplay

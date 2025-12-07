@@ -138,23 +138,6 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    void AutoTeleportSinglePlayer(GolfBallController ball)
-    {
-        Vector3 ballPosition = ball.GetPosition();
-
-        InputController[] controllers = Object.FindObjectsByType<InputController>(FindObjectsSortMode.None);
-        foreach (var controller in controllers)
-            controller.OnPlayerTeleported();
-
-        int ownerIndex = ball.GetOwnerIndex();
-        if (ownerIndex < players.Length && players[ownerIndex] != null)
-            players[ownerIndex].position = ballPosition + playerOffsetFromBall;
-        else if (players.Length > 0)
-            players[0].position = ballPosition + playerOffsetFromBall;
-
-        ball.ResetForNextShot();
-    }
-
     void StartShotSelection()
     {
         selectionActive = true;
@@ -237,6 +220,29 @@ public class GameManager : MonoBehaviour
                           $"Player 2: {p2}";
     }
 
+    void AutoTeleportSinglePlayer(GolfBallController ball)
+    {
+        Vector3 ballPosition = ball.GetPosition();
+
+        InputController[] controllers = Object.FindObjectsByType<InputController>(FindObjectsSortMode.None);
+        foreach (var controller in controllers)
+            controller.OnPlayerTeleported();
+
+        int ownerIndex = ball.GetOwnerIndex();
+        if (ownerIndex < players.Length && players[ownerIndex] != null)
+            players[ownerIndex].position = ballPosition + playerOffsetFromBall;
+        else if (players.Length > 0)
+            players[0].position = ballPosition + playerOffsetFromBall;
+
+        ball.ResetForNextShot();
+
+        // Prepare camera for next swing
+        if (cameraController != null)
+        {
+            cameraController.PrepareForSwings();
+        }
+    }
+
     void TeleportToBall(int ownerIndex)
     {
         // Hide indicators
@@ -294,6 +300,11 @@ public class GameManager : MonoBehaviour
 
         ResetVotes();
         selectionActive = false;
+
+        if (cameraController != null)
+        {
+            cameraController.PrepareForSwings();
+        }
     }
 
     void ResetVotes()
