@@ -33,10 +33,12 @@ public class SceneMGR : MonoBehaviour
             { KeyCode.L, () => SwitchToCanvas(loseCanvas) },
         };
 
-        
-        if (SceneManager.GetActiveScene().name == "MainMenu")
+        string currentScene = SceneManager.GetActiveScene().name;
+
+        if (currentScene == "MainMenu" || currentScene == "CustomizationScene")
         {
             SwitchToCanvas(menuCanvas);
+            Time.timeScale = 1f;
         }
         else
         {
@@ -73,6 +75,11 @@ public class SceneMGR : MonoBehaviour
             return;
         }
 
+        if (sceneName == "CustomizationScene")
+        {
+            ReturnToMainMenu();
+            return;
+        }
         
         if (isGamePaused)
         {
