@@ -70,7 +70,6 @@ public class GolfBallController : MonoBehaviour
         isLocked = false;
     }
 
-    // Public methods for other systems
     public int GetOwnerIndex()
     {
         return ownerPlayerIndex;

@@ -39,7 +39,6 @@ public class CameraController : MonoBehaviour
     private float lastManualInputTime;
     private Vector3 manualOffset;
 
-    // Vertical deadzone tracking
     private float lastTargetY;
 
     // Swing tracking state
@@ -49,6 +48,10 @@ public class CameraController : MonoBehaviour
     private Vector3 frozenCameraPosition;
     private bool isMultiplayer = false;
     private GolfBallController lastHitBall = null;
+
+    // Ball cycling
+    private GolfBallController[] allBalls;
+    private int currentBallIndex = 0;
 
     void Start()
     {
@@ -68,8 +71,10 @@ public class CameraController : MonoBehaviour
 
         // Detect if multiplayer
         DetectGameMode();
-        
-        // Prepare for first shot
+
+        // Cache all balls
+        allBalls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
+
         PrepareForSwings();
     }
 
@@ -95,7 +100,6 @@ public class CameraController : MonoBehaviour
 
     private void UpdateCamera()
     {
-
         Vector2 ballVelocity = ballRb ? ballRb.linearVelocity : Vector2.zero;
 
         // Manual Mode overrides everything
@@ -108,7 +112,7 @@ public class CameraController : MonoBehaviour
             return;
         }
 
-        // If waiting for both players to swing, smoothly move to frozen position
+        // If waiting for both players to swing
         if (isWaitingForSwings && waitForBothPlayers && isMultiplayer)
         {
             // Smooth transition to frozen position
@@ -118,26 +122,22 @@ public class CameraController : MonoBehaviour
             return;
         }
 
-        // === VELOCITY LOOKAHEAD ===
         Vector2 targetLookAhead = Vector2.zero;
 
+        // Lookahead based on ball velocity
         if (ballVelocity.magnitude > 0.1f)
         {
             targetLookAhead.x = ballVelocity.x != 0 ? Mathf.Sign(ballVelocity.x) * lookAheadDistance : 0f;
             targetLookAhead.y = ballVelocity.y != 0 ? Mathf.Sign(ballVelocity.y) * lookAheadDistance : 0f;
         }
 
-        // Smooth lookahead
         currentLookAhead.x = Mathf.Lerp(currentLookAhead.x, targetLookAhead.x, Time.deltaTime * lookAheadSmoothing);
         currentLookAhead.y = Mathf.Lerp(currentLookAhead.y, targetLookAhead.y, Time.deltaTime * lookAheadSmoothing);
 
         Vector3 target = ball.position + currentLookAhead;
         target.z = 0;
 
-        // === HORIZONTAL SMOOTHING ===
         float smoothX2 = Mathf.SmoothDamp(followTarget.position.x, target.x, ref velX, horizontalSmoothTime);
-
-        // === VERTICAL DEADZONE + SMOOTHING WITH LOOKAHEAD ===
         float dy = target.y - lastTargetY;
 
         if (Mathf.Abs(dy) > verticalDeadzone)
@@ -161,19 +161,9 @@ public class CameraController : MonoBehaviour
         player2HasSwung = false;
         lastHitBall = null;
 
-        // Position camera to show both players
-        // Find a good position between both balls
-        GolfBallController[] balls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
-        if (balls.Length >= 2)
-        {
-            Vector3 midpoint = (balls[0].transform.position + balls[1].transform.position) / 2f;
-            frozenCameraPosition = midpoint + preSwingCameraOffset;
-        }
-        else if (ball != null)
-        {
-            frozenCameraPosition = ball.position + preSwingCameraOffset;
-        }
-        
+        allBalls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
+
+        frozenCameraPosition = ball.position + preSwingCameraOffset;
         frozenCameraPosition.z = 0;
 
         // Reset velocities for smooth transition
@@ -188,8 +178,7 @@ public class CameraController : MonoBehaviour
             return;
 
         // Find and track the ball that was just hit
-        GolfBallController[] balls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
-        foreach (var b in balls)
+        foreach (var b in allBalls)
         {
             if (b.GetOwnerIndex() == playerIndex)
             {
@@ -218,17 +207,46 @@ public class CameraController : MonoBehaviour
         if (lastHitBall != null)
         {
             SetBall(lastHitBall.transform);
+
+            // Update current ball index to match
+            for (int i = 0; i < allBalls.Length; i++)
+            {
+                if (allBalls[i] == lastHitBall)
+                {
+                    currentBallIndex = i;
+                    break;
+                }
+            }
         }
 
-        // Reset look-ahead for smooth transition
         currentLookAhead = Vector3.zero;
-
-        // Update lastTargetY to current camera position for smooth transition
         lastTargetY = followTarget.position.y;
-        
-        // Reset velocities for smooth transition
         velX = 0f;
         velY = 0f;
+    }
+
+    public void CycleTargetBall()
+    {
+        allBalls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
+
+        if (allBalls.Length == 0)
+            return;
+
+        if (isWaitingForSwings)
+            return;
+
+        // Cycle to next ball
+        currentBallIndex = (currentBallIndex + 1) % allBalls.Length;
+
+        GolfBallController targetBall = allBalls[currentBallIndex];
+
+        if (targetBall != null)
+        {
+            SetBall(targetBall.transform);
+            lastHitBall = targetBall;
+
+            currentLookAhead = Vector3.zero;
+        }
     }
 
     public void OnCameraMove(Vector2 input)

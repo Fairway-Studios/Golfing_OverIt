@@ -114,6 +114,12 @@ public class InputController : MonoBehaviour
         }
     }
 
+    public void OnCycleCamTarget(InputAction.CallbackContext context)
+    {
+        if (cameraController != null && context.performed)
+            cameraController.CycleTargetBall();
+    }
+
     public void OnMoveCamera(InputAction.CallbackContext context)
     {
         if (cameraController != null)

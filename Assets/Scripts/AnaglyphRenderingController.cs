@@ -23,7 +23,6 @@ public class AnaglyphRenderingController : MonoBehaviour
 
     void Start()
     {
-        // Get all SpriteRenderers
         allSpriteRenderers = GetComponentsInChildren<SpriteRenderer>();
         originalSpriteColors = new Color[allSpriteRenderers.Length];
         for (int i = 0; i < allSpriteRenderers.Length; i++)
@@ -31,7 +30,6 @@ public class AnaglyphRenderingController : MonoBehaviour
             originalSpriteColors[i] = allSpriteRenderers[i].color;
         }
 
-        // Get all text renderers
         allTMProUI = GetComponentsInChildren<TextMeshProUGUI>();
         originalTMProUIColors = new Color[allTMProUI.Length];
         for (int i = 0; i < allTMProUI.Length; i++)
