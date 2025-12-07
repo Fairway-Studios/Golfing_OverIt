@@ -13,9 +13,9 @@ public class CameraController : MonoBehaviour
 
     [Header("Vertical Deadzone")]
     [SerializeField] private float verticalDeadzone = 5f;
-    [SerializeField] private float verticalSmoothTime = 0.25f;
 
-    [Header("Horizontal Smoothing")]
+    [Header("Smoothing")]
+    [SerializeField] private float verticalSmoothTime = 0.25f;
     [SerializeField] private float horizontalSmoothTime = 0.25f;
 
     [Header("Manual Camera Control")]

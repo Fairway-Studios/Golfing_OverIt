@@ -17,10 +17,6 @@ public class AnaglyphRenderingController : MonoBehaviour
     private TextMeshProUGUI[] allTMProUI;
     private Color[] originalTMProUIColors;
 
-    // TextMeshPro 3D
-    private TextMeshPro[] allTMPro3D;
-    private Color[] originalTMPro3DColors;
-
     void Start()
     {
         allSpriteRenderers = GetComponentsInChildren<SpriteRenderer>();
