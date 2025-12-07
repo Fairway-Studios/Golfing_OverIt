@@ -25,24 +25,21 @@ public class GolfBallController : MonoBehaviour
     {
         float speed = rb.linearVelocity.magnitude;
 
-        // Record starting position when ball starts moving
-        if (!hasRecordedHitStart && speed > stoppedVelocityThreshold)
+        if (!hasRecordedHitStart && speed > 0.01f)
         {
             hitStartPosition = transform.position;
             hasRecordedHitStart = true;
             hasStopped = false;
-            isLocked = true; 
+            isLocked = true;
         }
 
-        // Check if ball is moving
         if (speed > stoppedVelocityThreshold)
         {
             timeStationary = 0f;
             hasStopped = false;
         }
-        else if (isLocked)
+        else if (hasRecordedHitStart)
         {
-            // Ball is slow/stopped
             timeStationary += Time.fixedDeltaTime;
 
             if (timeStationary >= stoppedCheckDuration && !hasStopped)
@@ -50,7 +47,6 @@ public class GolfBallController : MonoBehaviour
                 rb.linearVelocity = Vector2.zero;
                 hasStopped = true;
 
-                // Log distance
                 if (hasRecordedHitStart)
                 {
                     float distance = Vector2.Distance(hitStartPosition, transform.position);
@@ -59,6 +55,7 @@ public class GolfBallController : MonoBehaviour
             }
         }
     }
+
 
     // Reset for next shot after teleport
     public void ResetForNextShot()

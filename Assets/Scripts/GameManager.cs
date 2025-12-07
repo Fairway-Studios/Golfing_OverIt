@@ -152,12 +152,6 @@ public class GameManager : MonoBehaviour
         else if (players.Length > 0)
             players[0].position = ballPosition + playerOffsetFromBall;
 
-        if (cameraController != null)
-        {
-            cameraController.SetBaseHeight(ballPosition.y);
-            cameraController.ResetToAutomatic();
-        }
-
         ball.ResetForNextShot();
     }
 
@@ -291,12 +285,6 @@ public class GameManager : MonoBehaviour
 
         if (cameraTransform != null)
             cameraTransform.position = new Vector3(pos.x, pos.y, cameraTransform.position.z);
-
-        if (cameraController != null)
-        {
-            cameraController.SetBaseHeight(pos.y);
-            cameraController.ResetToAutomatic();
-        }
 
         foreach (var ball in allBalls)
             ball.ResetForNextShot();

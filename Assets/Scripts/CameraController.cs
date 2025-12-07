@@ -13,7 +13,7 @@ public class CameraController : MonoBehaviour
     [SerializeField] private float lookAheadSmoothing = 5f;
 
     [Header("Vertical Tracking")]
-    [SerializeField] private float maxHeightOffset = 5f; 
+    [SerializeField] private float maxHeightOffset = 5f;
     [SerializeField] private float heightFollowSpeed = 1f;
     [SerializeField] private float heightReturnSpeed = 1f;
     [SerializeField] private float ballStoppedThreshold = 0.5f;
@@ -42,28 +42,25 @@ public class CameraController : MonoBehaviour
     {
         GameObject targetObj = new GameObject("CameraTarget");
         cameraFollowTarget = targetObj.transform;
+
         if (virtualCamera != null)
-        {
             virtualCamera.Follow = cameraFollowTarget;
-        }
+
         if (ball != null)
         {
             ballRb = ball.GetComponent<Rigidbody2D>();
-
-            //set the balls position at game start 
             baseHeight = ball.position.y;
         }
+
         if (cameraFollowTarget != null && ball != null)
-        {
             cameraFollowTarget.position = new Vector3(ball.position.x, ball.position.y, 0);
-        }
     }
 
     void LateUpdate()
     {
-        if (ball == null || cameraFollowTarget == null) return;
+        if (ball == null || cameraFollowTarget == null)
+            return;
 
-        // Check if automatic tracking should resume
         if (isManualControl && Time.time - lastManualInputTime > returnToTrackingDelay)
         {
             isManualControl = false;
@@ -79,17 +76,17 @@ public class CameraController : MonoBehaviour
         float ballSpeed = ballVelocity.magnitude;
         bool ballIsMoving = ballSpeed > ballStoppedThreshold;
 
-        // Manual Camera Control
+        // Manual Camera Mode
         if (isManualControl)
         {
-            // Move camera manually based on input
             manualCameraOffset += new Vector3(manualInput.x, manualInput.y, 0) * manualMoveSpeed * Time.deltaTime;
-            Vector3 manualPosition = ball.position + manualCameraOffset;
-            manualPosition.z = 0;
-            cameraFollowTarget.position = manualPosition;
+            Vector3 manualPos = ball.position + manualCameraOffset;
+            manualPos.z = 0;
+            cameraFollowTarget.position = manualPos;
             return;
         }
 
+        // Look ahead
         Vector2 targetLookAhead = Vector2.zero;
         if (ballIsMoving)
         {
@@ -105,31 +102,48 @@ public class CameraController : MonoBehaviour
         currentLookAhead.y = Mathf.Lerp(currentLookAhead.y, targetLookAhead.y, lookAheadSmoothing * Time.deltaTime);
 
         Vector3 targetPos = ball.position + currentLookAhead;
-        targetPos.y = Mathf.Clamp(targetPos.y, baseHeight, baseHeight + maxHeightOffset);
         targetPos.z = 0;
 
-        float smoothX = Mathf.SmoothDamp(cameraFollowTarget.position.x, targetPos.x, ref horizontalVelocity, horizontalSmoothTime);
+        float smoothX = Mathf.SmoothDamp(
+            cameraFollowTarget.position.x,
+            targetPos.x,
+            ref horizontalVelocity,
+            horizontalSmoothTime
+        );
 
+        // Vertical smoothing
         float verticalSmoothTime = ballIsMoving ? (1f / heightFollowSpeed) : (1f / heightReturnSpeed);
-        float smoothY = Mathf.SmoothDamp(cameraFollowTarget.position.y, targetPos.y, ref verticalVelocity, verticalSmoothTime);
+
+        // Soft clamp for upward movement only
+        float desiredY = targetPos.y;
+
+        if (desiredY > baseHeight + maxHeightOffset)
+        {
+            float excess = desiredY - (baseHeight + maxHeightOffset);
+            desiredY = (baseHeight + maxHeightOffset) + excess * 0.3f;
+        }
+
+        float smoothY = Mathf.SmoothDamp(
+            cameraFollowTarget.position.y,
+            desiredY,
+            ref verticalVelocity,
+            verticalSmoothTime
+        );
 
         cameraFollowTarget.position = new Vector3(smoothX, smoothY, 0);
 
         if (!ballIsMoving && ballWasMoving)
-        {
             ballWasMoving = false;
-        }
     }
 
-    // Called by InputController when manual camera control input is received
     public void OnCameraMove(Vector2 input)
     {
         manualInput = input;
+
         if (input.magnitude > 0.1f)
         {
             if (!isManualControl)
             {
-                // Switching to manual control - record current offset
                 manualCameraOffset = cameraFollowTarget.position - ball.position;
                 isManualControl = true;
             }
@@ -142,7 +156,6 @@ public class CameraController : MonoBehaviour
         baseHeight = newHeight;
     }
 
-    // Force return to automatic tracking
     public void ResetToAutomatic()
     {
         isManualControl = false;
