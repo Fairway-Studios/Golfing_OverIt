@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class AnaglyphRenderingController : MonoBehaviour
 {
@@ -8,17 +9,34 @@ public class AnaglyphRenderingController : MonoBehaviour
     private float valueShift = 1f;
     private float opacityMultiplier = 0.4f;
 
-    private SpriteRenderer[] allRenderers;
-    private Color[] originalColors;
+    // Sprite Renderers
+    private SpriteRenderer[] allSpriteRenderers;
+    private Color[] originalSpriteColors;
+
+    // TextMeshPro UI
+    private TextMeshProUGUI[] allTMProUI;
+    private Color[] originalTMProUIColors;
+
+    // TextMeshPro 3D
+    private TextMeshPro[] allTMPro3D;
+    private Color[] originalTMPro3DColors;
 
     void Start()
     {
-        allRenderers = GetComponentsInChildren<SpriteRenderer>();
-        originalColors = new Color[allRenderers.Length];
-
-        for (int i = 0; i < allRenderers.Length; i++)
+        // Get all SpriteRenderers
+        allSpriteRenderers = GetComponentsInChildren<SpriteRenderer>();
+        originalSpriteColors = new Color[allSpriteRenderers.Length];
+        for (int i = 0; i < allSpriteRenderers.Length; i++)
         {
-            originalColors[i] = allRenderers[i].color;
+            originalSpriteColors[i] = allSpriteRenderers[i].color;
+        }
+
+        // Get all text renderers
+        allTMProUI = GetComponentsInChildren<TextMeshProUGUI>();
+        originalTMProUIColors = new Color[allTMProUI.Length];
+        for (int i = 0; i < allTMProUI.Length; i++)
+        {
+            originalTMProUIColors[i] = allTMProUI[i].color;
         }
 
         ApplyHSVAdjustment();
@@ -26,29 +44,37 @@ public class AnaglyphRenderingController : MonoBehaviour
 
     public void ApplyHSVAdjustment()
     {
-
-        for (int i = 0; i < allRenderers.Length; i++)
+        // Apply to SpriteRenderers
+        for (int i = 0; i < allSpriteRenderers.Length; i++)
         {
-            if (allRenderers[i] != null)
+            if (allSpriteRenderers[i] != null)
             {
-                Color original = originalColors[i];
+                Color original = originalSpriteColors[i];
                 Color adjusted = AdjustColorHSV(original, hueShift, saturationShift, valueShift);
                 adjusted.a = original.a * opacityMultiplier;
+                allSpriteRenderers[i].color = adjusted;
+            }
+        }
 
-                allRenderers[i].color = adjusted;
+        // Apply to TextMeshProUGUI
+        for (int i = 0; i < allTMProUI.Length; i++)
+        {
+            if (allTMProUI[i] != null)
+            {
+                Color original = originalTMProUIColors[i];
+                Color adjusted = AdjustColorHSV(original, hueShift, saturationShift, valueShift);
+                adjusted.a = original.a * opacityMultiplier;
+                allTMProUI[i].color = adjusted;
             }
         }
     }
 
-
     private Color AdjustColorHSV(Color originalColor, float hueShift, float saturationShift, float valueShift)
     {
         Color.RGBToHSV(originalColor, out float h, out float s, out float v);
-
         h = Mathf.Repeat(h + (hueShift / 360f), 1f);
         s = Mathf.Clamp01(s + saturationShift);
         v = Mathf.Clamp01(v + valueShift);
-
         Color adjustedColor = Color.HSVToRGB(h, s, v);
         return adjustedColor;
     }
