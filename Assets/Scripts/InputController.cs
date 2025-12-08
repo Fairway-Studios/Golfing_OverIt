@@ -7,7 +7,6 @@ public class InputController : MonoBehaviour
 {
     [Header("Player Assignment")]
     [SerializeField] private int playerIndex = 0;
-    [SerializeField] private bool preferMouse = false;
 
     [Header("References")]
     public Transform playerOrigin;
@@ -37,7 +36,6 @@ public class InputController : MonoBehaviour
     private Vector2 moveInput;
     private Vector2 previousPosition;
     private PlayerInput playerInput;
-    private bool usingMouse = false;
     private GolfClubSettings currentClub;
     private bool canSwing = true;
     private GolfBallController[] allBalls;
@@ -58,39 +56,6 @@ public class InputController : MonoBehaviour
 
         allBalls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
 
-        AssignDevice();
-    }
-
-    void AssignDevice()
-    {
-        var gamepads = Gamepad.all;
-        playerInput.neverAutoSwitchControlSchemes = true;
-
-        if (preferMouse)
-        {
-            AssignMouse();
-        }
-        else
-        {
-            if (playerIndex < gamepads.Count)
-            {
-                playerInput.SwitchCurrentControlScheme("Controller", gamepads[playerIndex]);
-                usingMouse = false;
-            }
-            else
-            {
-                AssignMouse();
-            }
-        }
-    }
-
-    void AssignMouse()
-    {
-        if (Mouse.current != null)
-        {
-            playerInput.SwitchCurrentControlScheme("Mouse", Mouse.current);
-            usingMouse = true;
-        }
     }
 
     void Start()
@@ -148,10 +113,16 @@ public class InputController : MonoBehaviour
     {
         Vector2 currentVelocity = (rb.position - previousPosition) / Time.fixedDeltaTime;
 
-        if (usingMouse)
+        string scheme = playerInput.currentControlScheme;
+
+        if (scheme == "Mouse")
+        {
             HandleMouseMovement();
-        else
+        }
+        else if (scheme == "Controller")
+        {
             HandleControllerMovement();
+        }
 
         if (!canSwing)
         {
