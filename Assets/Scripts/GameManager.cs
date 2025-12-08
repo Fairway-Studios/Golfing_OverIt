@@ -38,6 +38,7 @@ public class GameManager : MonoBehaviour
             selectionUI.SetActive(false);
 
         DetectGameMode();
+
         SetupBallIndicators();
     }
 
@@ -69,6 +70,22 @@ public class GameManager : MonoBehaviour
     {
         isMultiplayer = (players.Length >= 2) || forceMultiplayerMode;
         Debug.Log($"Game Mode: {(isMultiplayer ? "Multiplayer" : "Single Player")} - {players.Length} players found");
+
+        if (!isMultiplayer)
+        {
+            ApplySinglePlayerAnaglyphOverride();
+        }
+    }
+
+    void ApplySinglePlayerAnaglyphOverride()
+    {
+        AnaglyphRenderingController[] anaglyphElements =
+            Object.FindObjectsByType<AnaglyphRenderingController>(FindObjectsSortMode.None);
+
+        foreach (var element in anaglyphElements)
+        {
+            element.ApplySinglePlayerColorOverride();
+        }
     }
 
     void Update()

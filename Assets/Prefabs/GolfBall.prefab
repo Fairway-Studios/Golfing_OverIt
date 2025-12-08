@@ -13,7 +13,6 @@ GameObject:
   - component: {fileID: 3861698409318400509}
   - component: {fileID: 5014335363288744799}
   - component: {fileID: 6541541978057945933}
-  - component: {fileID: 4679039035433090939}
   m_Layer: 6
   m_Name: GolfBall
   m_TagString: GolfBall
@@ -167,17 +166,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ownerPlayerIndex: 0
-  stoppedVelocityThreshold: 2
+  stoppedVelocityThreshold: 3
   stoppedCheckDuration: 2
---- !u!114 &4679039035433090939
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3491301912689170450}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 88cb305a8d150dc48871ca0ab9e40dfb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 

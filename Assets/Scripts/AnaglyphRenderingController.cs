@@ -72,14 +72,22 @@ public class AnaglyphRenderingController : MonoBehaviour
         return adjustedColor;
     }
 
-    public void ResetColors()
+    public void ApplySinglePlayerColorOverride()
     {
-        hueShift = 0f;
-        saturationShift = 0f;
-        valueShift = 0f;
-        opacityMultiplier = 1f;
-        ApplyHSVAdjustment();
+        if (allSpriteRenderers == null)
+            allSpriteRenderers = GetComponentsInChildren<SpriteRenderer>();
+
+        if (allSpriteRenderers != null)
+        {
+            Color overrideColor = new Color(0.5f, 0.5f, 0.5f, 1f);
+            foreach (var sr in allSpriteRenderers)
+            {
+                if (sr != null)
+                    sr.color = overrideColor;
+            }
+        }
     }
+
 
     public void SetHue(float hue)
     {
