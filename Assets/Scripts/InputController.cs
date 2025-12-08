@@ -15,6 +15,7 @@ public class InputController : MonoBehaviour
     [Header("References")]
     public Transform playerOrigin;
     public TextMeshProUGUI feedbackText;
+    public SceneMGR sceneManager;
 
     [Header("Swing Settings")]
     public float controllerSens = BASE_CONTROLLER_SENS;
@@ -211,7 +212,7 @@ public class InputController : MonoBehaviour
 
     private void HitBall(GameObject ball, Vector2 velocity)
     {
-        if (currentClub == null)
+        if (currentClub == null || sceneManager.IsGamePaused())
             return;
 
         Rigidbody2D ballRb = ball.GetComponent<Rigidbody2D>();

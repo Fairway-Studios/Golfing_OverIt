@@ -18,13 +18,14 @@ public class SceneMGR : MonoBehaviour
     [SerializeField] private GameObject pauseButtons;     
     [SerializeField] private GameObject pauseSettings;    
 
-    
+    private GameObject[] balls;
     private Dictionary<KeyCode, Action> keyActions;
     private bool isGamePaused = false;
 
     private void Start()
     {
-        
+        balls = GameObject.FindGameObjectsWithTag("GolfBall");
+
         keyActions = new Dictionary<KeyCode, Action>
         {
             { KeyCode.Escape, HandleEscapeInput },
@@ -104,9 +105,10 @@ public class SceneMGR : MonoBehaviour
     public void PauseGame()
     {
         isGamePaused = true;
-        
 
-        
+        foreach (var ball in balls)
+            ball.SetActive(false);
+
         if (pauseMenuRoot != null) pauseMenuRoot.SetActive(true);
         OpenPauseButtons();
     }
@@ -114,7 +116,9 @@ public class SceneMGR : MonoBehaviour
     public void ResumeGame()
     {
         isGamePaused = false;
-        
+
+        foreach (var ball in balls)
+            ball.SetActive(true);
 
         if (pauseMenuRoot != null) pauseMenuRoot.SetActive(false);
     }
@@ -172,5 +176,10 @@ public class SceneMGR : MonoBehaviour
     {
         SwitchToCanvas(null); 
         if (pauseMenuRoot != null) pauseMenuRoot.SetActive(false);
+    }
+
+    public bool IsGamePaused()
+    {
+        return isGamePaused;
     }
 }
