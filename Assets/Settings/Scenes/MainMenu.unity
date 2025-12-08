@@ -687,7 +687,7 @@ PrefabInstance:
       objectReference: {fileID: 3433200915844963058}
     - target: {fileID: 6744149200931907627, guid: 003c74d9facee284db07da88623dcf46, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: ToggleSettings
+      value: OpenPauseSettings
       objectReference: {fileID: 0}
     - target: {fileID: 8005343908001205019, guid: 003c74d9facee284db07da88623dcf46, type: 3}
       propertyPath: m_AnchorMax.y

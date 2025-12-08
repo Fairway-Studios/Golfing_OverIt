@@ -38,13 +38,13 @@ public class SceneMGR : MonoBehaviour
         if (currentScene == "MainMenu" || currentScene == "CustomizationScene")
         {
             SwitchToCanvas(menuCanvas);
-            Time.timeScale = 1f;
+            
         }
         else
         {
             
             CloseAllMenus();
-            Time.timeScale = 1f;
+           
         }
     }
 
@@ -104,7 +104,7 @@ public class SceneMGR : MonoBehaviour
     public void PauseGame()
     {
         isGamePaused = true;
-        Time.timeScale = 0f; 
+        
 
         
         if (pauseMenuRoot != null) pauseMenuRoot.SetActive(true);
@@ -114,7 +114,7 @@ public class SceneMGR : MonoBehaviour
     public void ResumeGame()
     {
         isGamePaused = false;
-        Time.timeScale = 1f; 
+        
 
         if (pauseMenuRoot != null) pauseMenuRoot.SetActive(false);
     }
