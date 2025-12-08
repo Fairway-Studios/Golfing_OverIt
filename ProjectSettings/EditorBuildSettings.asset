@@ -27,7 +27,7 @@ EditorBuildSettings:
     path: Assets/Settings/Scenes/SingleplayerScene.unity
     guid: 798b03099e6f24a40adb1ea0451e5260
   - enabled: 1
-    path: Assets/Settings/Scenes/MultiPlayerScene.unity
+    path: Assets/Settings/Scenes/MultiplayerScene.unity
     guid: c1326a6eb7b07864f97acce1e4f195ef
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}

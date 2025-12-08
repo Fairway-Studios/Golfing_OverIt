@@ -1,3 +1,4 @@
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -5,6 +6,9 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(Rigidbody2D))]
 public class InputController : MonoBehaviour
 {
+    private const float BASE_MOUSE_SENS = 100f;
+    private const float BASE_CONTROLLER_SENS = 2000f;
+
     [Header("Player Assignment")]
     [SerializeField] private int playerIndex = 0;
 
@@ -13,8 +17,8 @@ public class InputController : MonoBehaviour
     public TextMeshProUGUI feedbackText;
 
     [Header("Swing Settings")]
-    public float controllerSens = 2000f;
-    public float mouseSens = 100f;
+    public float controllerSens = BASE_CONTROLLER_SENS;
+    public float mouseSens = BASE_MOUSE_SENS;
     public float maxDistance = 2f;
 
     [Header("Club Settings")]
@@ -29,6 +33,10 @@ public class InputController : MonoBehaviour
 
     [Header("Sound Effects")]
     public AudioClip[] hitSounds;
+
+    [Header("Input Actions")]
+    [SerializeField] private InputActionReference swingAction;
+    [SerializeField] private InputActionReference cameraAction;
 
     private Rigidbody2D rb;
     private CameraController cameraController;
@@ -266,4 +274,31 @@ public class InputController : MonoBehaviour
     {
         return playerIndex;
     }
+
+    public void SetSensitivity(float sensitivity)
+    {
+        controllerSens = BASE_CONTROLLER_SENS * sensitivity;
+        mouseSens = BASE_MOUSE_SENS * sensitivity;
+    }
+
+    public void InvertSticks(bool swap)
+    {
+        var swing = swingAction.action;
+        var cam = cameraAction.action;
+
+        string swingBinding = swing.bindings[0].effectivePath;
+        string camBinding = cam.bindings[0].effectivePath;
+
+        if (swap)
+        {
+            swing.ChangeBinding(0).WithPath(camBinding);
+            cam.ChangeBinding(0).WithPath(swingBinding);
+        }
+        else
+        {
+            swing.ChangeBinding(0).WithPath(swingBinding);
+            cam.ChangeBinding(0).WithPath(camBinding);
+        }
+    }
+
 }
