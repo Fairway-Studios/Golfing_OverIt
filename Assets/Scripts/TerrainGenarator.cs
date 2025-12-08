@@ -2,7 +2,7 @@
 using UnityEngine;
 
 #if UNITY_EDITOR
-using UnityEditor; // EditorApplication.delayCall
+using UnityEditor; 
 #endif
 
 /// <summary>
@@ -44,7 +44,7 @@ public class PerlinMountain2D : MonoBehaviour
     public Color mountainColor = new Color(0.65f, 0.68f, 0.72f);
     public bool addPolygonCollider2D = true;
 
-    // ---------- GROUND HOOKUP ----------
+    // GROUND HOOKUP 
     [Header("Ground hookup")]
     [Tooltip("Root transform of your ground prefab (children will follow this).")]
     public Transform groundRoot;
@@ -54,9 +54,9 @@ public class PerlinMountain2D : MonoBehaviour
 
     [Tooltip("If true, also scale ground height to match the vertical wall height.")]
     public bool scaleGroundHeight = false;
-    // -----------------------------------
 
-    // ---------- SPAWNING ----------
+
+    //  SPAWNING
     [Header("Spawners")]
     [Tooltip("Empty child on Ground where the player should spawn.")]
     public Transform playerOneSpawnPoint;
@@ -73,7 +73,7 @@ public class PerlinMountain2D : MonoBehaviour
 
     public GameObject playerTwoPrefab;
     public GameObject ballTwoPrefab;
-    // -------------------------------
+
 
     [Header("Editor")]
     [Tooltip("If on, the generator will refresh when you tweak values in the inspector.")]
@@ -97,7 +97,7 @@ public class PerlinMountain2D : MonoBehaviour
     }
 #endif
 
-    // ------------- PUBLIC -------------
+    // PUBLIC
     [ContextMenu("Generate Now")]
     public void GenerateNow()
     {
@@ -107,7 +107,7 @@ public class PerlinMountain2D : MonoBehaviour
         Regenerate();
     }
 
-    // ------------- CORE BUILD -------------
+    //  CORE BUILD 
     void Regenerate()
     {
 #if UNITY_EDITOR
@@ -168,7 +168,7 @@ public class PerlinMountain2D : MonoBehaviour
         }
     }
 
-    // ------------- HELPERS -------------
+    // HELPERS
     void ClearGenerated()
     {
         // mountains
@@ -294,7 +294,7 @@ public class PerlinMountain2D : MonoBehaviour
         }
     }
 
-    // ---------- MOVE EXISTING PLAYER & BALL ----------
+    //  MOVE EXISTING PLAYER & BALL 
     void SpawnGameplayObjects()
     {
         // You can run this in edit mode too if you like,
@@ -338,7 +338,7 @@ public class PerlinMountain2D : MonoBehaviour
     }
 
 
-    // ------------- EDITOR LIFECYCLE -------------
+    //  EDITOR LIFECYCLE
     void OnEnable()
     {
 #if UNITY_EDITOR
