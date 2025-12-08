@@ -66,6 +66,21 @@ public class InputController : MonoBehaviour
     void Start()
     {
         previousPosition = rb.position;
+        
+        if (!gameManager.IsMultiplayer())
+        {
+            ApplySinglePlayerAnaglyphOverride();
+        }
+    }
+    void ApplySinglePlayerAnaglyphOverride()
+    {
+        AnaglyphRenderingController[] anaglyphElements =
+            Object.FindObjectsByType<AnaglyphRenderingController>(FindObjectsSortMode.None);
+
+        foreach (var element in anaglyphElements)
+        {
+            element.ApplySinglePlayerColorOverride();
+        }
     }
 
     public void OnSwing(InputAction.CallbackContext context)

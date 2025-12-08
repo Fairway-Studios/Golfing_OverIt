@@ -79,6 +79,7 @@ public class AnaglyphRenderingController : MonoBehaviour
 
         if (allSpriteRenderers != null)
         {
+            // Set anaglyph elements to default gray same as body
             Color overrideColor = new Color(0.5f, 0.5f, 0.5f, 1f);
             foreach (var sr in allSpriteRenderers)
             {
