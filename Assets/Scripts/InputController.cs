@@ -35,10 +35,6 @@ public class InputController : MonoBehaviour
     [Header("Sound Effects")]
     public AudioClip[] hitSounds;
 
-    [Header("Input Actions")]
-    [SerializeField] private InputActionReference swingAction;
-    [SerializeField] private InputActionReference cameraAction;
-
     private Rigidbody2D rb;
     private CameraController cameraController;
     private GameManager gameManager;
@@ -284,22 +280,14 @@ public class InputController : MonoBehaviour
 
     public void InvertSticks(bool swap)
     {
-        var swing = swingAction.action;
-        var cam = cameraAction.action;
-
-        string swingBinding = swing.bindings[0].effectivePath;
-        string camBinding = cam.bindings[0].effectivePath;
-
         if (swap)
         {
-            swing.ChangeBinding(0).WithPath(camBinding);
-            cam.ChangeBinding(0).WithPath(swingBinding);
+            playerInput.actions["MoveCamera"].ApplyBindingOverride("<Gamepad>/leftStick");
+            playerInput.actions["Swing"].ApplyBindingOverride("<Gamepad>/rightStick");
         }
         else
         {
-            swing.ChangeBinding(0).WithPath(swingBinding);
-            cam.ChangeBinding(0).WithPath(camBinding);
+            playerInput.actions.RemoveAllBindingOverrides();
         }
     }
-
 }

@@ -1211,8 +1211,20 @@ MonoBehaviour:
   m_Group: {fileID: 0}
   onValueChanged:
     m_PersistentCalls:
-      m_Calls: []
-  m_IsOn: 1
+      m_Calls:
+      - m_Target: {fileID: 0}
+        m_TargetAssemblyTypeName: InputController, Assembly-CSharp
+        m_MethodName: InvertSticks
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  m_IsOn: 0
 --- !u!1 &3816792677348476662
 GameObject:
   m_ObjectHideFlags: 0
@@ -2139,7 +2151,7 @@ MonoBehaviour:
       - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: InputController, Assembly-CSharp
         m_MethodName: InvertSticks
-        m_Mode: 6
+        m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -2148,7 +2160,7 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  m_IsOn: 1
+  m_IsOn: 0
 --- !u!1 &6234018582129915725
 GameObject:
   m_ObjectHideFlags: 0
@@ -3303,6 +3315,26 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 587841464128174589, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 587841464128174589, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 587841464128174589, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_MethodName
+      value: SetSaturation
+      objectReference: {fileID: 0}
+    - target: {fileID: 587841464128174589, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_TargetAssemblyTypeName
+      value: AnaglyphRenderingController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 587841464128174589, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     - target: {fileID: 890888831862081457, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
       propertyPath: m_AnchorMax.x
       value: 0.5
@@ -3342,6 +3374,46 @@ PrefabInstance:
     - target: {fileID: 2316663315377555813, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
       propertyPath: m_AnchorMax.y
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2977372597756041325, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2977372597756041325, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2977372597756041325, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_MethodName
+      value: SetOpacity
+      objectReference: {fileID: 0}
+    - target: {fileID: 2977372597756041325, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_TargetAssemblyTypeName
+      value: AnaglyphRenderingController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 2977372597756041325, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
+    - target: {fileID: 3010388758548986703, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3010388758548986703, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3010388758548986703, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_MethodName
+      value: SetOpacity
+      objectReference: {fileID: 0}
+    - target: {fileID: 3010388758548986703, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_TargetAssemblyTypeName
+      value: AnaglyphRenderingController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 3010388758548986703, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     - target: {fileID: 3411535027184951119, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
       propertyPath: m_AnchorMax.x
@@ -3459,6 +3531,26 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4699905311605450215, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4699905311605450215, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4699905311605450215, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_MethodName
+      value: SetSaturation
+      objectReference: {fileID: 0}
+    - target: {fileID: 4699905311605450215, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_TargetAssemblyTypeName
+      value: AnaglyphRenderingController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 4699905311605450215, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
+      objectReference: {fileID: 0}
     - target: {fileID: 4770090336460031491, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
       propertyPath: m_AnchorMax.x
       value: 0.5
@@ -3478,6 +3570,26 @@ PrefabInstance:
     - target: {fileID: 5098142741371193191, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
       propertyPath: m_AnchorMin.x
       value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 5522284272397211757, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5522284272397211757, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5522284272397211757, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_MethodName
+      value: SetHue
+      objectReference: {fileID: 0}
+    - target: {fileID: 5522284272397211757, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_TargetAssemblyTypeName
+      value: AnaglyphRenderingController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 5522284272397211757, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     - target: {fileID: 7112613639882845737, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
       propertyPath: m_AnchorMax.x
@@ -3506,6 +3618,26 @@ PrefabInstance:
     - target: {fileID: 7857643024556195358, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
       propertyPath: m_AnchorMax.y
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8478675341644339713, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8478675341644339713, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8478675341644339713, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_MethodName
+      value: SetHue
+      objectReference: {fileID: 0}
+    - target: {fileID: 8478675341644339713, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_TargetAssemblyTypeName
+      value: AnaglyphRenderingController, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 8478675341644339713, guid: ed0ca63365918a446ac458daff5ab6dd, type: 3}
+      propertyPath: m_OnValueChanged.m_PersistentCalls.m_Calls.Array.data[1].m_Arguments.m_ObjectArgumentAssemblyTypeName
+      value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
