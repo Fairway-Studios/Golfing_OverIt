@@ -46,10 +46,10 @@ public class GolfBallController : MonoBehaviour
             {
                 hasStopped = true;
 
-                // Freeze ball position and velocity to prevent glitch bounce
+                // Set velocity 0 to prevent glitch bounce
                 rb.linearVelocity = Vector2.zero;
                 rb.angularVelocity = 0f;
-                rb.position = rb.position;
+                rb.position = transform.position;
 
                 if (hasRecordedHitStart)
                 {
