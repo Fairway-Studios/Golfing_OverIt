@@ -45,6 +45,7 @@ public class InputController : MonoBehaviour
     private GolfClubSettings currentClub;
     private bool canSwing = true;
     private GolfBallController[] allBalls;
+    private string sceneName => SceneManager.GetActiveScene().name;
 
     void Awake()
     {
@@ -61,20 +62,11 @@ public class InputController : MonoBehaviour
         }
 
         allBalls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
-
     }
 
     void Start()
     {
         previousPosition = rb.position;
-
-        Scene currentScene = SceneManager.GetActiveScene();
-        string sceneName = currentScene.name;
-
-        if (sceneName == "SingleplayerScene")
-        {
-            ApplySinglePlayerAnaglyphOverride();
-        }
     }
     void ApplySinglePlayerAnaglyphOverride()
     {
@@ -146,6 +138,11 @@ public class InputController : MonoBehaviour
         else if (scheme == "Controller")
         {
             HandleControllerMovement();
+        }
+
+        if (sceneName == "SingleplayerScene")
+        {
+            ApplySinglePlayerAnaglyphOverride();
         }
 
         if (!canSwing)

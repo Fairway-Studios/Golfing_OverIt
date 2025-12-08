@@ -16,7 +16,7 @@ public class SceneMGR : MonoBehaviour
     [Header("Pause System UI")]
     [SerializeField] private GameObject pauseMenuRoot;    
     [SerializeField] private GameObject pauseButtons;     
-    [SerializeField] private GameObject pauseSettings;    
+    [SerializeField] private GameObject pauseSettings;
 
     private GameObject[] balls;
     private Dictionary<KeyCode, Action> keyActions;
@@ -99,8 +99,6 @@ public class SceneMGR : MonoBehaviour
             PauseGame(); 
         }
     }
-
-    
 
     public void PauseGame()
     {
