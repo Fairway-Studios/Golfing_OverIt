@@ -2,6 +2,7 @@ using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class InputController : MonoBehaviour
@@ -66,8 +67,11 @@ public class InputController : MonoBehaviour
     void Start()
     {
         previousPosition = rb.position;
-        
-        if (!gameManager.IsMultiplayer())
+
+        Scene currentScene = SceneManager.GetActiveScene();
+        string sceneName = currentScene.name;
+
+        if (sceneName == "SingleplayerScene")
         {
             ApplySinglePlayerAnaglyphOverride();
         }
