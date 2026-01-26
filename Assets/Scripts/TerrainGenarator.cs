@@ -82,6 +82,11 @@ public class PerlinMountain2D : MonoBehaviour
     readonly List<GameObject> _generated = new(); // mountains
 
 
+    [Header("Caves")]
+    public CaveGenerator caveGenerator;
+
+
+
 #if UNITY_EDITOR
     bool _prefabChecked;
     bool _isPrefabAsset;
@@ -136,7 +141,18 @@ public class PerlinMountain2D : MonoBehaviour
                 seed + 100 * m
             );
 
+            if (caveGenerator != null)
+            {
+                caveGenerator.ApplyFakeCaves(surface, baseY, cursorX, mountainWidth, seed + 100 * m);
+
+
+
+            }
+
+
             var polygon = BuildClosedPolygon(surface, baseY);
+
+            
 
             var lr = mountainGO.AddComponent<LineRenderer>();
             lr.loop = true;
