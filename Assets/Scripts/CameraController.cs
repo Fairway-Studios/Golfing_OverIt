@@ -11,20 +11,17 @@ public class CameraController : MonoBehaviour
     [SerializeField] private float lookAheadDistance = 4f;
     [SerializeField] private float lookAheadSmoothing = 4f;
 
-    [Header("Vertical Deadzone")]
-    [SerializeField] private float verticalDeadzone = 5f;
-
     [Header("Smoothing")]
-    [SerializeField] private float verticalSmoothTime = 0.25f;
-    [SerializeField] private float horizontalSmoothTime = 0.25f;
+    [SerializeField] private float verticalSmoothTime = 1f;
+    [SerializeField] private float horizontalSmoothTime = 1f;
 
     [Header("Asymmetric Vertical Tracking")]
-    [SerializeField] private float upwardDeadzone = 8f; // Larger deadzone when ball goes up
-    [SerializeField] private float downwardDeadzone = 2f; // Smaller deadzone when ball falls
-    [SerializeField] private float upwardSmoothTime = 0.5f; // Slower when tracking upward
-    [SerializeField] private float downwardSmoothTime = 0.15f; // Faster when tracking downward
-    [SerializeField] private float downwardLookAheadMultiplier = 1.5f; // Extra lookahead when falling
-    [SerializeField] private float apexVelocityThreshold = 0.5f; // Velocity threshold to detect apex
+    [SerializeField] private float upwardDeadzone = 8f;
+    [SerializeField] private float downwardDeadzone = 3f;
+    [SerializeField] private float upwardSmoothTime = 0.5f;
+    [SerializeField] private float downwardSmoothTime = 0.5f;
+    [SerializeField] private float downwardLookAheadMultiplier = 3f;
+    [SerializeField] private float apexVelocityThreshold = 0.5f;
 
     [Header("Manual Camera Control")]
     [SerializeField] private float manualMoveSpeed = 15f;
@@ -35,11 +32,11 @@ public class CameraController : MonoBehaviour
     [SerializeField] private Vector3 preSwingCameraOffset = new Vector3(4f, 1f, 0f);
 
     [Header("Dynamic Zoom")]
-    [SerializeField] private float baseOrthographicSize = 5f;
-    [SerializeField] private float maxOrthographicSize = 12f;
-    [SerializeField] private float speedThreshold = 2f;
+    [SerializeField] private float baseOrthographicSize = 12f;
+    [SerializeField] private float maxOrthographicSize = 30f;
+    [SerializeField] private float speedThreshold = 8f;
     [SerializeField] private float maxSpeed = 20f;
-    [SerializeField] private float zoomSmoothTime = 0.3f;
+    [SerializeField] private float zoomSmoothTime = 1f;
 
     private Transform followTarget;
     private Rigidbody2D ballRb;
@@ -138,7 +135,7 @@ public class CameraController : MonoBehaviour
     {
         Vector2 ballVelocity = ballRb ? ballRb.linearVelocity : Vector2.zero;
 
-        // Detect if ball is descending (has passed apex)
+        // Detect if ball is descending
         if (ballRb != null)
         {
             // Ball is descending if velocity changed from positive to negative or is negative and slowing
@@ -150,7 +147,6 @@ public class CameraController : MonoBehaviour
             {
                 isBallDescending = false;
             }
-            // Near apex (small velocity), maintain previous state
 
             previousBallVelocityY = ballVelocity.y;
         }
