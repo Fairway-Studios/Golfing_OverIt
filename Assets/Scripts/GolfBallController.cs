@@ -99,4 +99,22 @@ public class GolfBallController : MonoBehaviour
     {
         return isLocked;
     }
+
+    public void DisableTrail()
+    {
+        TrailRenderer trail = GetComponentInChildren<TrailRenderer>();
+        if (trail != null)
+        {
+            trail.enabled = false;
+        }
+    }
+
+    public void EnableTrail()
+    {
+        TrailRenderer trail = GetComponentInChildren<TrailRenderer>();
+        if (trail != null)
+        {
+            trail.enabled = true;
+        }
+    }
 }
