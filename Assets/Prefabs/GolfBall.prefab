@@ -166,5 +166,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ownerPlayerIndex: 0
-  stoppedVelocityThreshold: 2
+  stoppedVelocityThreshold: 0.5
   stoppedCheckDuration: 2

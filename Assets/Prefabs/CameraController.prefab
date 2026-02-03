@@ -51,12 +51,23 @@ MonoBehaviour:
   lookAheadDistance: 4
   lookAheadSmoothing: 4
   verticalDeadzone: 5
-  verticalSmoothTime: 0.18
-  horizontalSmoothTime: 0.18
+  verticalSmoothTime: 1
+  horizontalSmoothTime: 1
+  upwardDeadzone: 8
+  downwardDeadzone: 3
+  upwardSmoothTime: 0.5
+  downwardSmoothTime: 0.5
+  downwardLookAheadMultiplier: 3
+  apexVelocityThreshold: 0.5
   manualMoveSpeed: 15
-  returnToTrackingDelay: 1
+  returnToTrackingDelay: 2
   waitForBothPlayers: 1
   preSwingCameraOffset: {x: 4, y: 1, z: 0}
+  baseOrthographicSize: 12
+  maxOrthographicSize: 30
+  speedThreshold: 8
+  maxSpeed: 20
+  zoomSmoothTime: 1
 --- !u!1 &6729512101064381820
 GameObject:
   m_ObjectHideFlags: 0
