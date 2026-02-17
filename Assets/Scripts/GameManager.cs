@@ -42,6 +42,8 @@ public class GameManager : MonoBehaviour
         SetupBallIndicators();
 
         CheckForLoadGame();
+
+        CheckForLoadMultiplayerGame();
     }
 
     void CheckForLoadGame()
@@ -98,9 +100,75 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    void CheckForLoadMultiplayerGame()
+    {
+        if (GameSession.IsLoadingMultiplayerGame && players != null && players.Length >= 2)
+        {
+            PlayerData data = SaveSystem.LoadMultiplayer();
+            if (data != null && data.isMultiplayer)
+            {
+                Vector3 p1Pos = new Vector3(data.position[0], data.position[1], data.position[2]);
+                Vector3 p2Pos = new Vector3(data.position2[0], data.position2[1], data.position2[2]);
+
+                InputController[] controllers = Object.FindObjectsByType<InputController>(FindObjectsSortMode.None);
+
+                // 1. Teleport Players
+                if (players[0] != null)
+                {
+                    players[0].position = p1Pos;
+                    Rigidbody2D rb1 = players[0].GetComponent<Rigidbody2D>();
+                    if (rb1 != null) rb1.linearVelocity = Vector2.zero;
+                }
+
+                if (players[1] != null)
+                {
+                    players[1].position = p2Pos;
+                    Rigidbody2D rb2 = players[1].GetComponent<Rigidbody2D>();
+                    if (rb2 != null) rb2.linearVelocity = Vector2.zero;
+                }
+
+                // Tell the physics rigs to reset
+                foreach (var c in controllers) c.OnPlayerTeleported();
+
+                // 2. Teleport Balls to their respective owners
+                GolfBallController[] balls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
+                foreach (var ball in balls)
+                {
+                    int owner = ball.GetOwnerIndex();
+                    Vector3 targetPos = (owner == 0) ? p1Pos : p2Pos;
+                    targetPos -= playerOffsetFromBall; // Apply your offset
+
+                    ball.transform.position = targetPos;
+                    Rigidbody2D ballRb = ball.GetComponent<Rigidbody2D>();
+                    if (ballRb != null)
+                    {
+                        ballRb.position = targetPos;
+                        ballRb.linearVelocity = Vector2.zero;
+                    }
+                    ball.ResetForNextShot();
+                }
+
+                // 3. Move Camera to a mid-point (Optional, depends on your CameraController)
+                if (cameraTransform != null)
+                {
+                    Vector3 midPoint = (p1Pos + p2Pos) / 2f;
+                    cameraTransform.position = new Vector3(midPoint.x, midPoint.y, cameraTransform.position.z);
+                }
+
+                Debug.Log("Multiplayer Game Loaded Successfully and Physics Reset!");
+            }
+        }
+    }
+
     void FindPlayers()
     {
         InputController[] controllers = Object.FindObjectsByType<InputController>(FindObjectsSortMode.None);
+
+        // --- NEW: Sort the array alphabetically by the GameObject's name ---
+        // "PlayerOne" comes before "PlayerTwo" alphabetically (O comes before T).
+        // This guarantees Player 1 is ALWAYS index 0.
+        System.Array.Sort(controllers, (a, b) => a.transform.root.name.CompareTo(b.transform.root.name));
+
         players = new Transform[controllers.Length];
 
         for (int i = 0; i < controllers.Length; i++)
