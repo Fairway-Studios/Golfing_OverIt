@@ -46,34 +46,44 @@ public class GameManager : MonoBehaviour
 
     void CheckForLoadGame()
     {
-        // Only load if the flag is set AND we are in Singleplayer (1 player found)
-        if (GameSession.IsLoadingGame && players.Length == 1)
+        if (GameSession.IsLoadingGame && players != null && players.Length > 0)
         {
             PlayerData data = SaveSystem.LoadPlayer();
             if (data != null)
             {
                 Vector3 savedPos = new Vector3(data.position[0], data.position[1], data.position[2]);
 
+                
+                InputController[] controllers = Object.FindObjectsByType<InputController>(FindObjectsSortMode.None);
+
                 // 1. Move Player
                 if (players[0] != null)
                 {
                     players[0].position = savedPos;
-                    // Reset physics so they don't carry momentum from the spawn
                     Rigidbody2D rb = players[0].GetComponent<Rigidbody2D>();
                     if (rb != null) rb.linearVelocity = Vector2.zero;
                 }
 
-                // 2. Move Ball (Sync with player for reset state)
-                GolfBallController[] balls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
-                if (balls.Length > 0)
+                
+                foreach (var c in controllers)
                 {
-                    // Calculate offset based on your existing "playerOffsetFromBall" logic
-                    // Or simply place ball at player position minus offset
-                    Vector3 ballPos = savedPos - playerOffsetFromBall;
+                    c.OnPlayerTeleported();
+                }
 
+                // 2. Move Ball
+                GolfBallController[] balls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
+                if (balls != null && balls.Length > 0 && balls[0] != null)
+                {
+                    Vector3 ballPos = savedPos - playerOffsetFromBall;
                     balls[0].transform.position = ballPos;
-                    balls[0].GetRigidbody().position = ballPos;
-                    balls[0].GetRigidbody().linearVelocity = Vector2.zero;
+
+                    Rigidbody2D ballRb = balls[0].GetComponent<Rigidbody2D>();
+                    if (ballRb != null)
+                    {
+                        ballRb.position = ballPos;
+                        ballRb.linearVelocity = Vector2.zero;
+                    }
+
                     balls[0].ResetForNextShot();
                 }
 
@@ -83,7 +93,7 @@ public class GameManager : MonoBehaviour
                     cameraTransform.position = new Vector3(savedPos.x, savedPos.y, cameraTransform.position.z);
                 }
 
-                Debug.Log("Game Loaded from Save!");
+                Debug.Log("Game Loaded Successfully and Physics Reset!");
             }
         }
     }

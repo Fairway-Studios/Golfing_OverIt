@@ -99,7 +99,9 @@ public class SceneMGR : MonoBehaviour
     public void StartNewGame()
     {
         GameSession.IsLoadingGame = false;
-        // Optional: Delete old save? SaveSystem.DeleteSaveFile();
+
+        SaveSystem.DeleteSaveFile();
+
         SceneManager.LoadScene("SingleplayerScene");
     }
 
