@@ -330,6 +330,7 @@ public class GameManager : MonoBehaviour
 
         foreach (var ball in allBalls)
         {
+            ball.DisableTrail();
             ball.transform.position = pos;
             ball.GetRigidbody().position = pos;
             ball.GetRigidbody().linearVelocity = Vector2.zero;
@@ -340,7 +341,10 @@ public class GameManager : MonoBehaviour
             cameraTransform.position = new Vector3(pos.x, pos.y, cameraTransform.position.z);
 
         foreach (var ball in allBalls)
+        {
             ball.ResetForNextShot();
+            ball.EnableTrail();
+        }
 
         if (selectionUI != null)
             selectionUI.SetActive(false);

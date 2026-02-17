@@ -11,12 +11,17 @@ public class CameraController : MonoBehaviour
     [SerializeField] private float lookAheadDistance = 4f;
     [SerializeField] private float lookAheadSmoothing = 4f;
 
-    [Header("Vertical Deadzone")]
-    [SerializeField] private float verticalDeadzone = 5f;
-
     [Header("Smoothing")]
-    [SerializeField] private float verticalSmoothTime = 0.25f;
-    [SerializeField] private float horizontalSmoothTime = 0.25f;
+    [SerializeField] private float verticalSmoothTime = 1f;
+    [SerializeField] private float horizontalSmoothTime = 1f;
+
+    [Header("Asymmetric Vertical Tracking")]
+    [SerializeField] private float upwardDeadzone = 8f;
+    [SerializeField] private float downwardDeadzone = 3f;
+    [SerializeField] private float upwardSmoothTime = 0.5f;
+    [SerializeField] private float downwardSmoothTime = 0.5f;
+    [SerializeField] private float downwardLookAheadMultiplier = 3f;
+    [SerializeField] private float apexVelocityThreshold = 0.5f;
 
     [Header("Manual Camera Control")]
     [SerializeField] private float manualMoveSpeed = 15f;
@@ -25,6 +30,13 @@ public class CameraController : MonoBehaviour
     [Header("Swing Tracking")]
     [SerializeField] private bool waitForBothPlayers = true;
     [SerializeField] private Vector3 preSwingCameraOffset = new Vector3(4f, 1f, 0f);
+
+    [Header("Dynamic Zoom")]
+    [SerializeField] private float baseOrthographicSize = 12f;
+    [SerializeField] private float maxOrthographicSize = 30f;
+    [SerializeField] private float speedThreshold = 8f;
+    [SerializeField] private float maxSpeed = 20f;
+    [SerializeField] private float zoomSmoothTime = 1f;
 
     private Transform followTarget;
     private Rigidbody2D ballRb;
@@ -53,6 +65,15 @@ public class CameraController : MonoBehaviour
     private GolfBallController[] allBalls;
     private int currentBallIndex = 0;
 
+    // Dynamic zoom
+    private float currentZoomVelocity;
+    private float targetOrthographicSize;
+    private Vector3 lastCameraPosition;
+
+    // Vertical tracking state
+    private float previousBallVelocityY;
+    private bool isBallDescending = false;
+
     void Start()
     {
         // Create dynamic follow target
@@ -60,13 +81,24 @@ public class CameraController : MonoBehaviour
         followTarget = t.transform;
 
         if (virtualCamera != null)
+        {
             virtualCamera.Follow = followTarget;
+
+            // Initialize zoom
+            targetOrthographicSize = baseOrthographicSize;
+            if (virtualCamera.Lens.Orthographic)
+            {
+                virtualCamera.Lens.OrthographicSize = baseOrthographicSize;
+            }
+        }
 
         if (ball != null)
         {
             ballRb = ball.GetComponent<Rigidbody2D>();
             followTarget.position = ball.position;
             lastTargetY = ball.position.y;
+            lastCameraPosition = followTarget.position;
+            previousBallVelocityY = 0f;
         }
 
         // Detect if multiplayer
@@ -96,11 +128,28 @@ public class CameraController : MonoBehaviour
         }
 
         UpdateCamera();
+        UpdateDynamicZoom();
     }
 
     private void UpdateCamera()
     {
         Vector2 ballVelocity = ballRb ? ballRb.linearVelocity : Vector2.zero;
+
+        // Detect if ball is descending
+        if (ballRb != null)
+        {
+            // Ball is descending if velocity changed from positive to negative or is negative and slowing
+            if (ballVelocity.y < -apexVelocityThreshold)
+            {
+                isBallDescending = true;
+            }
+            else if (ballVelocity.y > apexVelocityThreshold)
+            {
+                isBallDescending = false;
+            }
+
+            previousBallVelocityY = ballVelocity.y;
+        }
 
         // Manual Mode overrides everything
         if (isManual)
@@ -128,7 +177,20 @@ public class CameraController : MonoBehaviour
         if (ballVelocity.magnitude > 0.1f)
         {
             targetLookAhead.x = ballVelocity.x != 0 ? Mathf.Sign(ballVelocity.x) * lookAheadDistance : 0f;
-            targetLookAhead.y = ballVelocity.y != 0 ? Mathf.Sign(ballVelocity.y) * lookAheadDistance : 0f;
+
+            // Enhanced downward lookahead
+            if (ballVelocity.y != 0)
+            {
+                float yLookAhead = Mathf.Sign(ballVelocity.y) * lookAheadDistance;
+
+                // Apply extra lookahead when ball is descending
+                if (isBallDescending && ballVelocity.y < 0)
+                {
+                    yLookAhead *= downwardLookAheadMultiplier;
+                }
+
+                targetLookAhead.y = yLookAhead;
+            }
         }
 
         currentLookAhead.x = Mathf.Lerp(currentLookAhead.x, targetLookAhead.x, Time.deltaTime * lookAheadSmoothing);
@@ -137,17 +199,58 @@ public class CameraController : MonoBehaviour
         Vector3 target = ball.position + currentLookAhead;
         target.z = 0;
 
+        // Horizontal tracking (unchanged)
         float smoothX2 = Mathf.SmoothDamp(followTarget.position.x, target.x, ref velX, horizontalSmoothTime);
-        float dy = target.y - lastTargetY;
 
-        if (Mathf.Abs(dy) > verticalDeadzone)
+        // Asymmetric vertical tracking
+        float dy = target.y - lastTargetY;
+        bool movingUp = dy > 0;
+
+        // Choose deadzone and smooth time based on direction
+        float activeDeadzone = movingUp ? upwardDeadzone : downwardDeadzone;
+        float activeSmoothTime = movingUp ? upwardSmoothTime : downwardSmoothTime;
+
+        if (Mathf.Abs(dy) > activeDeadzone)
         {
-            lastTargetY = Mathf.SmoothDamp(lastTargetY, target.y, ref velY, verticalSmoothTime);
+            lastTargetY = Mathf.SmoothDamp(lastTargetY, target.y, ref velY, activeSmoothTime);
         }
 
         float smoothY2 = lastTargetY;
 
         followTarget.position = new Vector3(smoothX2, smoothY2, 0);
+    }
+
+    private void UpdateDynamicZoom()
+    {
+        if (virtualCamera == null || !virtualCamera.Lens.Orthographic)
+            return;
+
+        // Calculate camera speed
+        Vector3 currentCameraPosition = followTarget.position;
+        float cameraSpeed = (currentCameraPosition - lastCameraPosition).magnitude / Time.deltaTime;
+        lastCameraPosition = currentCameraPosition;
+
+        // Calculate target zoom based on speed
+        if (cameraSpeed < speedThreshold)
+        {
+            targetOrthographicSize = baseOrthographicSize;
+        }
+        else
+        {
+            // Normalize speed between threshold and max speed
+            float normalizedSpeed = Mathf.Clamp01((cameraSpeed - speedThreshold) / (maxSpeed - speedThreshold));
+            targetOrthographicSize = Mathf.Lerp(baseOrthographicSize, maxOrthographicSize, normalizedSpeed);
+        }
+
+        // Smoothly interpolate to target zoom
+        float newSize = Mathf.SmoothDamp(
+            virtualCamera.Lens.OrthographicSize,
+            targetOrthographicSize,
+            ref currentZoomVelocity,
+            zoomSmoothTime
+        );
+
+        virtualCamera.Lens.OrthographicSize = newSize;
     }
 
     // Called when players are ready to take their shots
@@ -169,6 +272,10 @@ public class CameraController : MonoBehaviour
         // Reset velocities for smooth transition
         velX = 0f;
         velY = 0f;
+
+        // Reset vertical tracking state
+        isBallDescending = false;
+        previousBallVelocityY = 0f;
     }
 
     // Called by InputController when a player swings
@@ -223,6 +330,8 @@ public class CameraController : MonoBehaviour
         lastTargetY = followTarget.position.y;
         velX = 0f;
         velY = 0f;
+        isBallDescending = false;
+        previousBallVelocityY = 0f;
     }
 
     public void CycleTargetBall()

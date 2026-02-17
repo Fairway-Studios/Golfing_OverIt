@@ -1,8 +1,9 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using LibTessDotNet;
 
 #if UNITY_EDITOR
-using UnityEditor; 
+using UnityEditor;
 #endif
 
 /// <summary>
@@ -44,7 +45,11 @@ public class PerlinMountain2D : MonoBehaviour
     public Color mountainColor = new Color(0.65f, 0.68f, 0.72f);
     public bool addPolygonCollider2D = true;
 
-    // GROUND HOOKUP 
+    [Header("Fill")]
+    public bool fillMountain = true;
+    public Color fillColor = new Color(0.25f, 0.28f, 0.33f, 1f);
+    public int fillSortingOrder = -5; // behind outline
+
     [Header("Ground hookup")]
     [Tooltip("Root transform of your ground prefab (children will follow this).")]
     public Transform groundRoot;
@@ -55,8 +60,6 @@ public class PerlinMountain2D : MonoBehaviour
     [Tooltip("If true, also scale ground height to match the vertical wall height.")]
     public bool scaleGroundHeight = false;
 
-
-    //  SPAWNING
     [Header("Spawners")]
     [Tooltip("Empty child on Ground where the player should spawn.")]
     public Transform playerOneSpawnPoint;
@@ -74,13 +77,22 @@ public class PerlinMountain2D : MonoBehaviour
     public GameObject playerTwoPrefab;
     public GameObject ballTwoPrefab;
 
-
     [Header("Editor")]
     [Tooltip("If on, the generator will refresh when you tweak values in the inspector.")]
     public bool autoRegenerateOnValidate = true;
 
     readonly List<GameObject> _generated = new(); // mountains
 
+    [Header("Caves")]
+    public CaveGenerator caveGenerator;
+
+    // -------- LibTess settings --------
+    [Header("LibTess Fill Settings")]
+    [Tooltip("How much to scale positions before tessellating (avoids floating precision issues).")]
+    public float tessScale = 1000f;
+
+    [Tooltip("If your fill gets inverted, toggle this.")]
+    public bool tessInvertWinding = false;
 
 #if UNITY_EDITOR
     bool _prefabChecked;
@@ -97,17 +109,15 @@ public class PerlinMountain2D : MonoBehaviour
     }
 #endif
 
-    // PUBLIC
     [ContextMenu("Generate Now")]
     public void GenerateNow()
     {
 #if UNITY_EDITOR
-        if (!Application.isPlaying && IsPrefabAsset()) return; // don't touch prefab asset
+        if (!Application.isPlaying && IsPrefabAsset()) return;
 #endif
         Regenerate();
     }
 
-    //  CORE BUILD 
     void Regenerate()
     {
 #if UNITY_EDITOR
@@ -136,7 +146,17 @@ public class PerlinMountain2D : MonoBehaviour
                 seed + 100 * m
             );
 
+            if (caveGenerator != null)
+            {
+                caveGenerator.ApplyFakeCaves(surface, baseY, cursorX, mountainWidth, seed + 100 * m);
+            }
+
             var polygon = BuildClosedPolygon(surface, baseY);
+
+            if (fillMountain)
+            {
+                AddFillMesh_LibTess(mountainGO, polygon, fillColor, fillSortingOrder);
+            }
 
             var lr = mountainGO.AddComponent<LineRenderer>();
             lr.loop = true;
@@ -160,7 +180,7 @@ public class PerlinMountain2D : MonoBehaviour
             if (m == 0)
             {
                 AlignGroundToMountainStart(surface);
-                SpawnGameplayObjects(); // this already checks Application.isPlaying
+                SpawnGameplayObjects();
             }
 
             _generated.Add(mountainGO);
@@ -168,45 +188,29 @@ public class PerlinMountain2D : MonoBehaviour
         }
     }
 
-    // HELPERS
     void ClearGenerated()
     {
-        // mountains
         for (int i = _generated.Count - 1; i >= 0; i--)
         {
             var go = _generated[i];
             if (!go) continue;
 
-            if (Application.isPlaying)
-                Destroy(go);
-            else
-                DestroyImmediate(go);
+            if (Application.isPlaying) Destroy(go);
+            else DestroyImmediate(go);
         }
         _generated.Clear();
 
-        
-
-        // leftover children under this generator
         var toDestroy = new List<Transform>();
         foreach (Transform child in transform) toDestroy.Add(child);
+
         foreach (var t in toDestroy)
         {
-            if (Application.isPlaying)
-                Destroy(t.gameObject);
-            else
-                DestroyImmediate(t.gameObject);
+            if (Application.isPlaying) Destroy(t.gameObject);
+            else DestroyImmediate(t.gameObject);
         }
     }
 
-    List<Vector3> BuildSurfacePoints(
-        float startX,
-        float groundY,
-        float width,
-        float step,
-        float amp,
-        float freq,
-        int seedLocal
-    )
+    List<Vector3> BuildSurfacePoints(float startX, float groundY, float width, float step, float amp, float freq, int seedLocal)
     {
         var pts = new List<Vector3>();
         int steps = Mathf.Max(2, Mathf.CeilToInt(width / Mathf.Max(0.01f, step)));
@@ -215,7 +219,6 @@ public class PerlinMountain2D : MonoBehaviour
         float minYAllowed = groundY - Mathf.Abs(baseMargin);
 
         bool initialized = false;
-        float prevX = startX;
         float prevY = groundY;
 
         for (int i = 0; i <= steps; i++)
@@ -234,14 +237,12 @@ public class PerlinMountain2D : MonoBehaviour
             {
                 pts.Add(new Vector3(x, y, 0f));
                 initialized = true;
-                prevX = x;
                 prevY = y;
                 continue;
             }
 
             if (useStairSteps)
             {
-                // horizontal, then vertical
                 pts.Add(new Vector3(x, prevY, 0f));
                 pts.Add(new Vector3(x, y, 0f));
             }
@@ -250,7 +251,6 @@ public class PerlinMountain2D : MonoBehaviour
                 pts.Add(new Vector3(x, y, 0f));
             }
 
-            prevX = x;
             prevY = y;
         }
 
@@ -259,7 +259,7 @@ public class PerlinMountain2D : MonoBehaviour
 
     List<Vector3> BuildClosedPolygon(List<Vector3> surface, float groundY)
     {
-        var poly = new List<Vector3>(surface.Count + 3);
+        var poly = new List<Vector3>(surface.Count + 4);
         poly.AddRange(surface);
 
         var last = surface[surface.Count - 1];
@@ -294,15 +294,8 @@ public class PerlinMountain2D : MonoBehaviour
         }
     }
 
-    //  MOVE EXISTING PLAYER & BALL 
     void SpawnGameplayObjects()
     {
-        // You can run this in edit mode too if you like,
-        // but if you ONLY want it at runtime, uncomment this:
-        // if (!Application.isPlaying) return;
-
-        //player1
-        // Move the existing player object
         if (playerOneSpawnPoint != null && playerOnePrefab != null)
         {
             Transform t = playerOnePrefab.transform;
@@ -310,7 +303,6 @@ public class PerlinMountain2D : MonoBehaviour
             t.rotation = playerOneSpawnPoint.rotation;
         }
 
-        // Move the existing ball object
         if (ballOneSpawnPoint != null && ballOnePrefab != null)
         {
             Transform t = ballOnePrefab.transform;
@@ -318,17 +310,13 @@ public class PerlinMountain2D : MonoBehaviour
             t.rotation = ballOneSpawnPoint.rotation;
         }
 
-
-        //player2
-        // Move the existing player object
-        if (playerOneSpawnPoint != null && playerTwoPrefab != null)
+        if (playerTwoSpawnPoint != null && playerTwoPrefab != null)
         {
             Transform t = playerTwoPrefab.transform;
             t.position = playerTwoSpawnPoint.position;
             t.rotation = playerTwoSpawnPoint.rotation;
         }
 
-        // Move the existing ball object
         if (ballTwoSpawnPoint != null && ballTwoPrefab != null)
         {
             Transform t = ballTwoPrefab.transform;
@@ -337,17 +325,14 @@ public class PerlinMountain2D : MonoBehaviour
         }
     }
 
-
-    //  EDITOR LIFECYCLE
     void OnEnable()
     {
 #if UNITY_EDITOR
         if (!Application.isPlaying && IsPrefabAsset())
-            return;   // don't generate in prefab asset
+            return;
 
         if (!Application.isPlaying)
         {
-            // regenerate once after inspector changes / enable
             EditorApplication.delayCall += () =>
             {
                 if (this == null) return;
@@ -373,4 +358,177 @@ public class PerlinMountain2D : MonoBehaviour
         };
     }
 #endif
+
+    // ------------------ LibTess Fill ------------------
+    void AddFillMesh_LibTess(GameObject mountainGO, List<Vector3> polygon, Color color, int sortingOrder)
+    {
+        var mf = mountainGO.AddComponent<MeshFilter>();
+        var mr = mountainGO.AddComponent<MeshRenderer>();
+
+        var mat = new Material(Shader.Find("Sprites/Default"));
+        mat.color = color;
+        mr.sharedMaterial = mat;
+        mr.sortingOrder = sortingOrder;
+
+        // Work on a local copy so we never mutate your outline/collider polygon.
+        var work = new List<Vector3>(polygon);
+        RemoveNearDuplicates(polygon, 0.0001f);
+        RemoveCollinear(polygon, 0.0001f);
+        RemoveBacktrackingSpikes(polygon); // ✅ ADD THIS
+
+
+        if (work.Count < 3)
+            return;
+
+        // LibTess works best if we scale up coordinates a bit (reduces precision issues).
+        float s = Mathf.Max(1f, tessScale);
+
+        var tess = new Tess();
+
+        // Add one contour (your polygon). LibTess can handle weird cases much better than ear clipping.
+        // We tessellate on X/Y (Z not used).
+        var contour = new ContourVertex[work.Count];
+        for (int i = 0; i < work.Count; i++)
+        {
+            var p = work[i];
+            contour[i].Position = new Vec3(p.x * s, p.y * s, 0);
+            contour[i].Data = i; // optional
+        }
+
+        // Winding: your polygon is typically CCW, but caves can flip it.
+        // If you see inverted fill, toggle tessInvertWinding in inspector.
+        var winding = tessInvertWinding ? ContourOrientation.Clockwise : ContourOrientation.CounterClockwise;
+        tess.AddContour(contour, winding);
+
+        // Tessellate into triangles
+        // WindingRule.EvenOdd is usually safest for funky self-touching/looping shapes.
+        tess.Tessellate(WindingRule.EvenOdd, ElementType.Polygons, 3);
+
+        if (tess.ElementCount <= 0 || tess.Vertices == null || tess.Vertices.Length < 3)
+        {
+            Debug.LogWarning($"LibTess failed to tessellate {mountainGO.name} (points={work.Count}).");
+            return;
+        }
+
+        // Convert tess vertices back to Unity verts
+        var verts = new Vector3[tess.Vertices.Length];
+        for (int i = 0; i < verts.Length; i++)
+        {
+            var v = tess.Vertices[i].Position;
+            verts[i] = new Vector3((float)(v.X / s), (float)(v.Y / s), 0f);
+        }
+
+        // Elements are indices (triangles)
+        // Each element is 3 indices because we requested polygons of size 3
+        int triCount = tess.ElementCount * 3;
+        var tris = new int[triCount];
+
+        int k = 0;
+        for (int e = 0; e < tess.ElementCount; e++)
+        {
+            int i0 = tess.Elements[e * 3 + 0];
+            int i1 = tess.Elements[e * 3 + 1];
+            int i2 = tess.Elements[e * 3 + 2];
+
+            // LibTess can output -1 for unused vertices in some modes,
+            // but for ElementType.Polygons with size 3, it should be valid.
+            if (i0 < 0 || i1 < 0 || i2 < 0)
+                continue;
+
+            tris[k++] = i0;
+            tris[k++] = i1;
+            tris[k++] = i2;
+        }
+
+        if (k < 3)
+        {
+            Debug.LogWarning($"LibTess produced no valid triangles for {mountainGO.name}.");
+            return;
+        }
+
+        if (k != tris.Length)
+        {
+            // shrink array if we skipped any invalid entries
+            var trimmed = new int[k];
+            for (int i = 0; i < k; i++) trimmed[i] = tris[i];
+            tris = trimmed;
+        }
+
+        var mesh = new UnityEngine.Mesh();
+        mesh.name = "MountainFill_LibTess";
+        mesh.vertices = verts;
+        mesh.triangles = tris;
+        mesh.RecalculateBounds();
+        mesh.RecalculateNormals();
+
+        mf.sharedMesh = mesh;
+    }
+
+    // ------------------ cleanup helpers ------------------
+
+    static void RemoveBacktrackingSpikes(List<Vector3> pts, float eps = 0.0001f)
+    {
+        if (pts.Count < 4) return;
+
+        for (int i = pts.Count - 1; i >= 2; i--)
+        {
+            Vector2 a = pts[i - 2];
+            Vector2 b = pts[i - 1];
+            Vector2 c = pts[i];
+
+            Vector2 ab = (b - a).normalized;
+            Vector2 bc = (c - b).normalized;
+
+            // If directions are almost opposite → spike
+            if (Vector2.Dot(ab, bc) < -0.999f)
+            {
+                pts.RemoveAt(i - 1);
+            }
+        }
+    }
+
+
+    static void RemoveNearDuplicates(List<Vector3> pts, float eps = 0.0001f)
+    {
+        for (int i = pts.Count - 2; i >= 0; i--)
+        {
+            if ((pts[i + 1] - pts[i]).sqrMagnitude <= eps * eps)
+                pts.RemoveAt(i + 1);
+        }
+
+        if (pts.Count > 2 && (pts[0] - pts[pts.Count - 1]).sqrMagnitude <= eps * eps)
+            pts.RemoveAt(pts.Count - 1);
+    }
+
+    static void RemoveCollinear(List<Vector3> pts, float eps = 0.0001f)
+    {
+        if (pts.Count < 3) return;
+
+        int guard = 0;
+        while (pts.Count >= 3 && guard++ < 5000)
+        {
+            bool removedAny = false;
+
+            for (int i = 0; i < pts.Count; i++)
+            {
+                Vector2 a = pts[(i - 1 + pts.Count) % pts.Count];
+                Vector2 b = pts[i];
+                Vector2 c = pts[(i + 1) % pts.Count];
+
+                Vector2 ab = b - a;
+                Vector2 bc = c - b;
+
+                float cross = ab.x * bc.y - ab.y * bc.x;
+
+                if (Mathf.Abs(cross) <= eps)
+                {
+                    pts.RemoveAt(i);
+                    removedAny = true;
+                    break;
+                }
+            }
+
+            if (!removedAny) break;
+        }
+    }
 }
