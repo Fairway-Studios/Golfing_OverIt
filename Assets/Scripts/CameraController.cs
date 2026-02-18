@@ -245,7 +245,6 @@ public class CameraController : MonoBehaviour
             ref verticalBiasVelocity, verticalBiasSmoothTime
         );
 
-        // Lookahead based on velocity direction
         Vector2 targetLookAhead = Vector2.zero;
 
         if (speed > 0.1f)
@@ -265,12 +264,9 @@ public class CameraController : MonoBehaviour
         currentLookAhead.x = Mathf.Lerp(currentLookAhead.x, targetLookAhead.x, Time.deltaTime * lookAheadSmoothing);
         currentLookAhead.y = Mathf.Lerp(currentLookAhead.y, targetLookAhead.y, Time.deltaTime * lookAheadSmoothing);
 
-        // When ball is near-stationary, frame ball AND player together so both
-        // sit in the bottom 10% composition
         Vector3 frameOrigin = ball.position;
         if (speed < 1f && targetTransform != null)
         {
-            // Midpoint between ball and player as the anchor, then apply bias
             frameOrigin = (ball.position + targetTransform.position) / 2f;
         }
 
@@ -278,7 +274,7 @@ public class CameraController : MonoBehaviour
         target.y += currentVerticalBias;
         target.z = 0;
 
-        // Horizontal: smooth damp
+        // Horizontal: straightforward smooth damp
         float smoothX = Mathf.SmoothDamp(followTarget.position.x, target.x, ref velX, horizontalSmoothTime);
 
         // Vertical: asymmetric deadzone
@@ -578,12 +574,14 @@ public class CameraController : MonoBehaviour
         return new Bounds((min + max) / 2f, size);
     }
 
-
     public void OnBallHit(Vector2 launchPosition, Vector2 launchVelocity)
     {
         if (ballRb == null) return;
         if (launchVelocity.magnitude < minimumVelocityForPrediction) return;
 
+        if (isWaitingForSwings) return;
+
+        // Always hide line first
         if (trajectoryLine != null) trajectoryLine.enabled = false;
         isTrajectoryActive = false;
         analyticArcActive = false;
@@ -733,7 +731,6 @@ public class CameraController : MonoBehaviour
         ball = newBall;
         if (ball != null) { ballRb = ball.GetComponent<Rigidbody2D>(); lastTargetY = ball.position.y; }
     }
-
     public void SetTrackingMode(TrackingMode mode) => trackingMode = mode;
     public TrackingMode GetTrackingMode() => trackingMode;
     public void SetWaitForBothPlayers(bool wait) => waitForBothPlayers = wait;
