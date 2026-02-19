@@ -94,6 +94,18 @@ public class PerlinMountain2D : MonoBehaviour
     [Tooltip("If your fill gets inverted, toggle this.")]
     public bool tessInvertWinding = false;
 
+    [Header("Fill Bottom Extension")]
+    
+    public float fallbackFillDepth = 50f;    // used if no camera found / not ortho
+
+
+    void Start()
+    {
+        if (!Application.isPlaying) return;
+        GenerateNow(); // always generates a new map when the scene loads
+    }
+
+
 #if UNITY_EDITOR
     bool _prefabChecked;
     bool _isPrefabAsset;
@@ -125,10 +137,15 @@ public class PerlinMountain2D : MonoBehaviour
 #endif
 
         if (useRandomSeed)
-            seed = Random.Range(int.MinValue / 2, int.MaxValue / 2);
+            seed = unchecked((int)System.DateTime.UtcNow.Ticks);
         Random.InitState(seed);
 
         ClearGenerated();
+
+        // Always extend fill deep enough so camera/map preview never reveals the bottom
+        float fillCloseY = baseY - fallbackFillDepth;
+
+
 
         float cursorX = 0f;
         for (int m = 0; m < mountainCount; m++)
@@ -151,7 +168,19 @@ public class PerlinMountain2D : MonoBehaviour
                 caveGenerator.ApplyFakeCaves(surface, baseY, cursorX, mountainWidth, seed + 100 * m);
             }
 
-            var polygon = BuildClosedPolygon(surface, baseY);
+            var polygon = BuildClosedPolygon(surface, fillCloseY);
+            var colliderPoly = BuildClosedPolygon(surface, baseY);
+
+
+            // Clean polygon for collider stability
+            RemoveNearDuplicates(polygon, 0.0001f);
+            RemoveCollinear(polygon, 0.0001f);
+            RemoveBacktrackingSpikes(polygon, 0.0001f);
+
+            RemoveNearDuplicates(colliderPoly, 0.0001f);
+            RemoveCollinear(colliderPoly, 0.0001f);
+            RemoveBacktrackingSpikes(colliderPoly, 0.0001f);
+
 
             if (fillMountain)
             {
@@ -171,8 +200,8 @@ public class PerlinMountain2D : MonoBehaviour
             if (addPolygonCollider2D)
             {
                 var col = mountainGO.AddComponent<PolygonCollider2D>();
-                var v2 = new Vector2[polygon.Count];
-                for (int i = 0; i < polygon.Count; i++) v2[i] = (Vector2)polygon[i];
+                var v2 = new Vector2[colliderPoly.Count];
+                for (int i = 0; i < colliderPoly.Count; i++) v2[i] = (Vector2)colliderPoly[i];
                 col.pathCount = 1;
                 col.SetPath(0, v2);
             }
@@ -243,13 +272,26 @@ public class PerlinMountain2D : MonoBehaviour
 
             if (useStairSteps)
             {
-                pts.Add(new Vector3(x, prevY, 0f));
-                pts.Add(new Vector3(x, y, 0f));
+                // Horizontal move at prevY
+                Vector3 p1 = new Vector3(x, prevY, 0f);
+
+                // Add p1 only if it's not the same as the last point
+                if ((pts[pts.Count - 1] - p1).sqrMagnitude > 0.0000001f)
+                    pts.Add(p1);
+
+                // Vertical move to y ONLY if y changed
+                if (Mathf.Abs(y - prevY) > 0.0001f)
+                {
+                    Vector3 p2 = new Vector3(x, y, 0f);
+                    if ((pts[pts.Count - 1] - p2).sqrMagnitude > 0.0000001f)
+                        pts.Add(p2);
+                }
             }
             else
             {
                 pts.Add(new Vector3(x, y, 0f));
             }
+
 
             prevY = y;
         }
@@ -257,19 +299,26 @@ public class PerlinMountain2D : MonoBehaviour
         return pts;
     }
 
-    List<Vector3> BuildClosedPolygon(List<Vector3> surface, float groundY)
+    List<Vector3> BuildClosedPolygon(List<Vector3> surface, float closeY)
     {
+        const float eps = 0.0001f;
+
         var poly = new List<Vector3>(surface.Count + 4);
         poly.AddRange(surface);
 
         var last = surface[surface.Count - 1];
         var first = surface[0];
 
-        poly.Add(new Vector3(last.x, groundY, 0f));
-        poly.Add(new Vector3(first.x, groundY, 0f));
+        if (Mathf.Abs(last.y - closeY) > eps)
+            poly.Add(new Vector3(last.x, closeY, 0f));
+
+        Vector3 groundStart = new Vector3(first.x, closeY, 0f);
+        if ((poly[poly.Count - 1] - groundStart).sqrMagnitude > eps * eps)
+            poly.Add(groundStart);
 
         return poly;
     }
+
 
     void AlignGroundToMountainStart(List<Vector3> surface)
     {
@@ -372,9 +421,10 @@ public class PerlinMountain2D : MonoBehaviour
 
         // Work on a local copy so we never mutate your outline/collider polygon.
         var work = new List<Vector3>(polygon);
-        RemoveNearDuplicates(polygon, 0.0001f);
-        RemoveCollinear(polygon, 0.0001f);
-        RemoveBacktrackingSpikes(polygon); // ✅ ADD THIS
+        RemoveNearDuplicates(work, 0.0001f);
+        RemoveCollinear(work, 0.0001f);
+        RemoveBacktrackingSpikes(work, 0.0001f);
+
 
 
         if (work.Count < 3)
