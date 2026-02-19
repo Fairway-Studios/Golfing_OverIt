@@ -48,7 +48,7 @@ public class PerlinMountain2D : MonoBehaviour
     [Header("Fill")]
     public bool fillMountain = true;
     public Color fillColor = new Color(0.25f, 0.28f, 0.33f, 1f);
-    public int fillSortingOrder = -5; // behind outline
+    public int fillSortingOrder = -10; // behind outline
 
     [Header("Ground hookup")]
     [Tooltip("Root transform of your ground prefab (children will follow this).")]
@@ -85,6 +85,10 @@ public class PerlinMountain2D : MonoBehaviour
 
     [Header("Caves")]
     public CaveGenerator caveGenerator;
+
+    [Header("Obstacles")]
+    public ObstaclePlacement2D obstaclePlacer;
+
 
     // -------- LibTess settings --------
     [Header("LibTess Fill Settings")]
@@ -206,6 +210,23 @@ public class PerlinMountain2D : MonoBehaviour
                 col.SetPath(0, v2);
             }
 
+            // Spawn obstacles AFTER collider is created (so overlap checks can work)
+            if (obstaclePlacer != null)
+            {
+                obstaclePlacer.SpawnOnMountain(
+                    surface,
+                    cursorX,
+                    mountainWidth,
+                    seed + 9999 + 100 * m,   // unique per mountain, deterministic
+                    transform,
+                    playerOneSpawnPoint,
+                    ballOneSpawnPoint,
+                    playerTwoSpawnPoint,
+                    ballTwoSpawnPoint
+                );
+            }
+
+
             if (m == 0)
             {
                 AlignGroundToMountainStart(surface);
@@ -219,25 +240,35 @@ public class PerlinMountain2D : MonoBehaviour
 
     void ClearGenerated()
     {
-        for (int i = _generated.Count - 1; i >= 0; i--)
+        // clear obstacles first (this will destroy Obstacles_Root and null the reference)
+        if (obstaclePlacer != null)
+            obstaclePlacer.Clear();
+
+        // destroy any leftover mountain children (even if _generated list got out of sync)
+        var toDestroy = new List<GameObject>();
+        foreach (Transform child in transform)
         {
-            var go = _generated[i];
+            if (!child) continue;
+
+            if (child.name.StartsWith("Mountain_"))
+                toDestroy.Add(child.gameObject);
+        }
+
+        for (int i = 0; i < toDestroy.Count; i++)
+        {
+            var go = toDestroy[i];
             if (!go) continue;
 
             if (Application.isPlaying) Destroy(go);
             else DestroyImmediate(go);
         }
+
         _generated.Clear();
-
-        var toDestroy = new List<Transform>();
-        foreach (Transform child in transform) toDestroy.Add(child);
-
-        foreach (var t in toDestroy)
-        {
-            if (Application.isPlaying) Destroy(t.gameObject);
-            else DestroyImmediate(t.gameObject);
-        }
     }
+
+
+
+
 
     List<Vector3> BuildSurfacePoints(float startX, float groundY, float width, float step, float amp, float freq, int seedLocal)
     {
