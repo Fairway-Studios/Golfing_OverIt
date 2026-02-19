@@ -1586,6 +1586,14 @@ PrefabInstance:
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
       value: OpenPauseSettings
       objectReference: {fileID: 0}
+    - target: {fileID: 7962664586334082026, guid: 003c74d9facee284db07da88623dcf46, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7962664586334082026, guid: 003c74d9facee284db07da88623dcf46, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 50
+      objectReference: {fileID: 0}
     - target: {fileID: 8005343908001205019, guid: 003c74d9facee284db07da88623dcf46, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -1667,7 +1675,8 @@ PrefabInstance:
       value: SingleplayerScene
       objectReference: {fileID: 0}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 1182899287545710978, guid: 003c74d9facee284db07da88623dcf46, type: 3}
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 4109476659964905789, guid: 003c74d9facee284db07da88623dcf46, type: 3}
       insertIndex: -1
