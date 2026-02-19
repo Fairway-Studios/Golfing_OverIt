@@ -15,10 +15,6 @@ public class SceneMGR : MonoBehaviour
     [SerializeField] private GameObject singlePlayerSubMenu; // The Panel with New Game / Continue
     [SerializeField] private Button continueButton;          // To disable if no save exists
 
-    [Header("Multiplayer Mode UI")]
-    [SerializeField] private GameObject multiPlayerSubMenu;
-    [SerializeField] private UnityEngine.UI.Button continueMultiButton;
-
     [Header("Game Over UI")]
     [SerializeField] private GameObject winCanvas;
     [SerializeField] private GameObject loseCanvas;
@@ -236,53 +232,5 @@ public class SceneMGR : MonoBehaviour
     {
         return isGamePaused;
     }
-
-    public void OpenMultiplayerMenu()
-    {
-        // Removed the line that turns off the menuCanvas!
-        if (multiPlayerSubMenu != null)
-        {
-            multiPlayerSubMenu.SetActive(true);
-            if (continueMultiButton != null)
-                continueMultiButton.interactable = SaveSystem.HasMultiplayerSaveFile();
-        }
-    }
-
-    public void CloseMultiplayerMenu()
-    {
-        // Only hide the sub-menu, leave the background alone.
-        if (multiPlayerSubMenu != null) multiPlayerSubMenu.SetActive(false);
-    }
-
-    public void StartNewMultiplayerGame()
-    {
-        GameSession.IsLoadingMultiplayerGame = false;
-        SaveSystem.DeleteMultiplayerSaveFile(); // Wipe old save
-        SceneManager.LoadScene("MultiplayerScene"); // Make sure this matches your scene name exactly!
-    }
-
-    public void ContinueMultiplayerGame()
-    {
-        if (SaveSystem.HasMultiplayerSaveFile())
-        {
-            GameSession.IsLoadingMultiplayerGame = true;
-            SceneManager.LoadScene("MultiplayerScene");
-        }
-    }
-
-    public void SaveMultiplayerGame()
-    {
-        // Find both players in the scene
-        GameObject p1 = GameObject.Find("PlayerOne"); // Or whatever your hierarchy name is
-        GameObject p2 = GameObject.Find("PlayerTwo");
-
-        if (p1 != null && p2 != null)
-        {
-            SaveSystem.SaveMultiplayer(p1.transform, p2.transform, SceneManager.GetActiveScene().buildIndex);
-        }
-        else
-        {
-            Debug.LogError("Cannot Save Multiplayer: One or both players not found. Check Hierarchy names!");
-        }
-    }
+    
 }

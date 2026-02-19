@@ -45,36 +45,4 @@ public static class SaveSystem
             Debug.Log("Save file deleted.");
         }
     }
-
-    public static void SaveMultiplayer(Transform p1, Transform p2, int sceneIndex)
-    {
-        PlayerData data = new PlayerData(p1, p2, sceneIndex);
-        string json = JsonUtility.ToJson(data);
-        string path = Application.persistentDataPath + "/multiplayer.json";
-
-        File.WriteAllText(path, json);
-        Debug.Log("Multiplayer Game Saved to: " + path);
-    }
-
-    public static PlayerData LoadMultiplayer()
-    {
-        string path = Application.persistentDataPath + "/multiplayer.json";
-        if (File.Exists(path))
-        {
-            string json = File.ReadAllText(path);
-            return JsonUtility.FromJson<PlayerData>(json);
-        }
-        return null;
-    }
-
-    public static bool HasMultiplayerSaveFile()
-    {
-        return File.Exists(Application.persistentDataPath + "/multiplayer.json");
-    }
-
-    public static void DeleteMultiplayerSaveFile()
-    {
-        string path = Application.persistentDataPath + "/multiplayer.json";
-        if (File.Exists(path)) File.Delete(path);
-    }
 }
