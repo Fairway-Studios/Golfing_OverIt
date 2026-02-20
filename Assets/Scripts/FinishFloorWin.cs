@@ -27,9 +27,13 @@ public class FinishFloorWin : MonoBehaviour
             if (winUI != null)
             {
                 winUI.SetActive(true);
+
                 if (anaglyphUI != null)
                     anaglyphUI.SetActive(false);
-                singleplayerUI.SetActive(false);
+
+                if (singleplayerUI != null)
+                    singleplayerUI.SetActive(false);
+
                 Debug.Log("[FinishFloor] WinUI enabled successfully.");
             }
             else
