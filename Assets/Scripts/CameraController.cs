@@ -134,19 +134,15 @@ public class CameraController : MonoBehaviour
     private void UpdateCamera()
     {
         Vector2 ballVelocity = ballRb ? ballRb.linearVelocity : Vector2.zero;
+        float ballSpeed = ballVelocity.magnitude;
 
         // Detect if ball is descending
         if (ballRb != null)
         {
-            // Ball is descending if velocity changed from positive to negative or is negative and slowing
             if (ballVelocity.y < -apexVelocityThreshold)
-            {
                 isBallDescending = true;
-            }
             else if (ballVelocity.y > apexVelocityThreshold)
-            {
                 isBallDescending = false;
-            }
 
             previousBallVelocityY = ballVelocity.y;
         }
@@ -161,10 +157,9 @@ public class CameraController : MonoBehaviour
             return;
         }
 
-        // If waiting for both players to swing
+        // Waiting for swings
         if (isWaitingForSwings && waitForBothPlayers && isMultiplayer)
         {
-            // Smooth transition to frozen position
             float smoothX = Mathf.SmoothDamp(followTarget.position.x, frozenCameraPosition.x, ref velX, horizontalSmoothTime);
             float smoothY = Mathf.SmoothDamp(followTarget.position.y, frozenCameraPosition.y, ref velY, verticalSmoothTime);
             followTarget.position = new Vector3(smoothX, smoothY, 0);
@@ -173,21 +168,17 @@ public class CameraController : MonoBehaviour
 
         Vector2 targetLookAhead = Vector2.zero;
 
-        // Lookahead based on ball velocity
-        if (ballVelocity.magnitude > 0.1f)
+        // Horizontal & vertical lookahead while ball is moving
+        if (ballSpeed > 0.05f)
         {
             targetLookAhead.x = ballVelocity.x != 0 ? Mathf.Sign(ballVelocity.x) * lookAheadDistance : 0f;
 
-            // Enhanced downward lookahead
+            // Vertical lookahead
             if (ballVelocity.y != 0)
             {
                 float yLookAhead = Mathf.Sign(ballVelocity.y) * lookAheadDistance;
-
-                // Apply extra lookahead when ball is descending
                 if (isBallDescending && ballVelocity.y < 0)
-                {
                     yLookAhead *= downwardLookAheadMultiplier;
-                }
 
                 targetLookAhead.y = yLookAhead;
             }
@@ -199,23 +190,30 @@ public class CameraController : MonoBehaviour
         Vector3 target = ball.position + currentLookAhead;
         target.z = 0;
 
-        // Horizontal tracking (unchanged)
+        // Horizontal smoothing
         float smoothX2 = Mathf.SmoothDamp(followTarget.position.x, target.x, ref velX, horizontalSmoothTime);
 
-        // Asymmetric vertical tracking
-        float dy = target.y - lastTargetY;
-        bool movingUp = dy > 0;
-
-        // Choose deadzone and smooth time based on direction
-        float activeDeadzone = movingUp ? upwardDeadzone : downwardDeadzone;
-        float activeSmoothTime = movingUp ? upwardSmoothTime : downwardSmoothTime;
-
-        if (Mathf.Abs(dy) > activeDeadzone)
-        {
-            lastTargetY = Mathf.SmoothDamp(lastTargetY, target.y, ref velY, activeSmoothTime);
-        }
-
         float smoothY2 = lastTargetY;
+
+        float movingThreshold = 0.05f;
+        if (ballSpeed > movingThreshold)
+        {
+            float dy = target.y - lastTargetY;
+            bool movingUp = dy > 0;
+
+            float activeDeadzone = movingUp ? upwardDeadzone : downwardDeadzone;
+            float activeSmoothTime = movingUp ? upwardSmoothTime : downwardSmoothTime;
+
+            if (Mathf.Abs(dy) > activeDeadzone)
+                lastTargetY = Mathf.SmoothDamp(lastTargetY, target.y, ref velY, activeSmoothTime);
+
+            smoothY2 = lastTargetY;
+        }
+        else
+        {
+            smoothY2 = Mathf.SmoothDamp(followTarget.position.y, ball.position.y, ref velY, downwardSmoothTime);
+            lastTargetY = smoothY2;
+        }
 
         followTarget.position = new Vector3(smoothX2, smoothY2, 0);
     }

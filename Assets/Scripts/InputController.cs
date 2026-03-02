@@ -16,6 +16,7 @@ public class InputController : MonoBehaviour
     public Transform playerOrigin;
     public TextMeshProUGUI feedbackText;
     public SceneMGR sceneManager;
+    public ParticleSystem hitParticles;
 
     [Header("Swing Settings")]
     public float controllerSens = BASE_CONTROLLER_SENS;
@@ -38,6 +39,7 @@ public class InputController : MonoBehaviour
 
     [Header("Sound Effects")]
     public AudioClip[] hitSounds;
+    public AudioClip swapClubsSFX;
 
     private Rigidbody2D rb;
     private CameraController cameraController;
@@ -103,6 +105,9 @@ public class InputController : MonoBehaviour
         if (availableClubs == null || availableClubs.Length == 0)
             return;
 
+        AudioClip clip = swapClubsSFX;
+        SFXManager.Instance.PlaySFX(clip);
+
         currentClubIndex =
             (currentClubIndex + 1) % availableClubs.Length;
 
@@ -115,7 +120,7 @@ public class InputController : MonoBehaviour
 
     public void OnCycleCamTarget(InputAction.CallbackContext context)
     {
-        if (cameraController != null && context.performed)
+        if (cameraController != null && context.performed && gameManager.IsMultiplayer() == true)
             cameraController.CycleTargetBall();
     }
 
@@ -321,6 +326,12 @@ public class InputController : MonoBehaviour
         ballRb.AddForce(impulse, ForceMode2D.Impulse);
 
         PlayHitSound();
+
+        if (hitParticles != null & currentClub.clubName != "Putter")
+        {
+            hitParticles.transform.position = ball.transform.position;
+            hitParticles.Play();
+        }
 
         if (cameraController != null)
             cameraController.OnPlayerSwung(playerIndex);

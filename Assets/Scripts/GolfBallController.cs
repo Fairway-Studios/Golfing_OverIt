@@ -9,12 +9,19 @@ public class GolfBallController : MonoBehaviour
     [SerializeField] private float stoppedVelocityThreshold = 1.5f;
     [SerializeField] private float stoppedCheckDuration = 2f;
 
+    [Header("Bounce Effects")]
+    [SerializeField] private ParticleSystem bounceParticles;
+    [SerializeField] private AudioSource bounceAudio;
+    [SerializeField] private AudioClip bounceSoundClip;
+
     private Rigidbody2D rb;
     private float timeStationary = 0f;
     private bool hasStopped = false;
     private bool isLocked = false;
     private Vector3 hitStartPosition;
     private bool hasRecordedHitStart = false;
+
+    private float minBounceVelocity = 2f;
 
     void Start()
     {
@@ -60,6 +67,35 @@ public class GolfBallController : MonoBehaviour
         }
     }
 
+    void OnCollisionEnter2D(Collision2D collision)
+    {
+        // Get vertical component of the collision impact
+        float verticalImpact = Mathf.Abs(rb.linearVelocity.y);
+
+        // Only trigger if the bounce is big enough
+        if (verticalImpact >= minBounceVelocity)
+        {
+            Vector2 contactPoint = collision.contacts[0].point;
+            TriggerBounceEffects(verticalImpact, contactPoint);
+        }
+    }
+
+    void TriggerBounceEffects(float impactVelocity, Vector2 position)
+    {
+
+        bounceParticles.transform.position = position;
+        bounceParticles.Play();
+
+        // Trigger sound
+        PlayBounceSound(impactVelocity);
+    }
+
+    void PlayBounceSound(float impactVelocity)
+    {
+        bounceAudio.volume = 0.1f;
+        bounceAudio.pitch = Random.Range(0.6f, 1.1f);
+        bounceAudio.PlayOneShot(bounceSoundClip);
+    }
 
     // Reset for next shot after teleport
     public void ResetForNextShot()
