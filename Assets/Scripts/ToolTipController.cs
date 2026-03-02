@@ -1,15 +1,31 @@
 using UnityEngine;
+using System.Collections;
 
 public class ToolTipController : MonoBehaviour
 {
+    [Header("References")]
     public GameObject tooltipObject;
     public string triggerTag = "GolfBall";
+
+    [Header("Fade Settings")]
+    public float fadeDuration = 1f;
+
+    private CanvasGroup canvasGroup;
+    private Coroutine fadeCoroutine;
 
     private void Start()
     {
         if (tooltipObject != null)
         {
-            tooltipObject.SetActive(false);
+            canvasGroup = tooltipObject.GetComponent<CanvasGroup>();
+            if (canvasGroup == null)
+                canvasGroup = tooltipObject.AddComponent<CanvasGroup>();
+
+            canvasGroup.alpha = 0f;
+            canvasGroup.interactable = false;
+            canvasGroup.blocksRaycasts = false;
+
+            tooltipObject.SetActive(true);
         }
         else
         {
@@ -27,7 +43,7 @@ public class ToolTipController : MonoBehaviour
     {
         if (other.CompareTag(triggerTag))
         {
-            ShowTooltip();
+            FadeInTooltip();
         }
     }
 
@@ -35,23 +51,49 @@ public class ToolTipController : MonoBehaviour
     {
         if (other.CompareTag(triggerTag))
         {
-            HideTooltip();
+            FadeOutTooltip();
         }
     }
 
-    private void ShowTooltip()
+    private void FadeInTooltip()
     {
-        if (tooltipObject != null)
-        {
-            tooltipObject.SetActive(true);
-        }
+        if (fadeCoroutine != null)
+            StopCoroutine(fadeCoroutine);
+
+        fadeCoroutine = StartCoroutine(FadeTo(1f));
     }
 
-    private void HideTooltip()
+    private void FadeOutTooltip()
     {
-        if (tooltipObject != null)
+        if (fadeCoroutine != null)
+            StopCoroutine(fadeCoroutine);
+
+        fadeCoroutine = StartCoroutine(FadeTo(0f));
+    }
+
+    private IEnumerator FadeTo(float targetAlpha)
+    {
+        float startAlpha = canvasGroup.alpha;
+        float elapsed = 0f;
+
+        while (elapsed < fadeDuration)
         {
-            tooltipObject.SetActive(false);
+            elapsed += Time.deltaTime;
+            canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, elapsed / fadeDuration);
+            yield return null;
+        }
+
+        canvasGroup.alpha = targetAlpha;
+
+        if (targetAlpha == 0f)
+        {
+            canvasGroup.interactable = false;
+            canvasGroup.blocksRaycasts = false;
+        }
+        else
+        {
+            canvasGroup.interactable = true;
+            canvasGroup.blocksRaycasts = true;
         }
     }
 }
