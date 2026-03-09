@@ -50,7 +50,6 @@ MonoBehaviour:
   virtualCamera: {fileID: 4702101774646360849}
   lookAheadDistance: 4
   lookAheadSmoothing: 4
-  verticalDeadzone: 5
   verticalSmoothTime: 1
   horizontalSmoothTime: 1
   upwardDeadzone: 8
@@ -62,9 +61,9 @@ MonoBehaviour:
   manualMoveSpeed: 15
   returnToTrackingDelay: 2
   waitForBothPlayers: 1
-  preSwingCameraOffset: {x: 4, y: 1, z: 0}
+  preSwingCameraOffset: {x: 0, y: 0, z: 0}
   baseOrthographicSize: 12
-  maxOrthographicSize: 30
+  maxOrthographicSize: 25
   speedThreshold: 8
   maxSpeed: 20
   zoomSmoothTime: 1
@@ -97,7 +96,7 @@ Transform:
   m_GameObject: {fileID: 6729512101064381820}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 10, y: 5, z: -15}
+  m_LocalPosition: {x: 12.8, y: 7.2000003, z: -15}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -265,7 +264,7 @@ Transform:
   m_GameObject: {fileID: 7986772512189553444}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 10, y: 5, z: -15}
+  m_LocalPosition: {x: 12.8, y: 7.2000003, z: -15}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -329,7 +328,7 @@ MonoBehaviour:
   CameraDistance: 15
   DeadZoneDepth: 0
   Composition:
-    ScreenPosition: {x: 0, y: 0}
+    ScreenPosition: {x: -0.3, y: 0.3}
     DeadZone:
       Enabled: 0
       Size: {x: 0.2, y: 0.2}
@@ -337,8 +336,8 @@ MonoBehaviour:
       Enabled: 0
       Size: {x: 0.8, y: 0.8}
       Offset: {x: 0, y: 0}
-  CenterOnActivate: 1
-  TargetOffset: {x: 10, y: 5, z: 0}
+  CenterOnActivate: 0
+  TargetOffset: {x: 0, y: 0, z: 0}
   Damping: {x: 0, y: 0, z: 0}
   Lookahead:
     Enabled: 0

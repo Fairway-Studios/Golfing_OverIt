@@ -60,7 +60,8 @@ public class ToolTipController : MonoBehaviour
         if (fadeCoroutine != null)
             StopCoroutine(fadeCoroutine);
 
-        fadeCoroutine = StartCoroutine(FadeTo(1f));
+        if (gameObject.activeInHierarchy)
+            fadeCoroutine = StartCoroutine(FadeTo(1f));
     }
 
     private void FadeOutTooltip()
@@ -68,7 +69,8 @@ public class ToolTipController : MonoBehaviour
         if (fadeCoroutine != null)
             StopCoroutine(fadeCoroutine);
 
-        fadeCoroutine = StartCoroutine(FadeTo(0f));
+        if (gameObject.activeInHierarchy)
+            fadeCoroutine = StartCoroutine(FadeTo(0f));
     }
 
     private IEnumerator FadeTo(float targetAlpha)
