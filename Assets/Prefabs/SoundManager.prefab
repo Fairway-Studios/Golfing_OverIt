@@ -49,7 +49,7 @@ MonoBehaviour:
   sfxSource: {fileID: 2463500430009087688}
   ambienceSource: {fileID: 4980672405112526410}
   hoverSound: {fileID: 8300000, guid: e11974a42d19c854bbbee84b354d711a, type: 3}
-  clickSound: {fileID: 8300000, guid: d8e91fc40efdc27468164b2617dd1390, type: 3}
+  clickSound: {fileID: 8300000, guid: 772bed84028a2544a94725f8198af799, type: 3}
   birdsChirping: {fileID: 8300000, guid: fb35166b833dfd74e96cc11dc8c7a55f, type: 3}
 --- !u!82 &2463500430009087688
 AudioSource:
