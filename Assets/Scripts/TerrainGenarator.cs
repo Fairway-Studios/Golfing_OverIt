@@ -77,20 +77,35 @@ public class PerlinMountain2D : MonoBehaviour
     public GameObject playerTwoPrefab;
     public GameObject ballTwoPrefab;
 
+    [Header("Finish Hole Visual")]
+    [Tooltip("The actual visual golf hole prefab placed at the end of the last mountain.")]
+    public GameObject finishHoleVisualPrefab;
+
+    public float finishHoleEdgeInset = 0.1f;
+
+    [Tooltip("Offset applied after placing the finish hole visual.")]
+    public Vector3 finishHoleVisualOffset = Vector3.zero;
+
+    [Tooltip("If true, old finish hole visuals are removed before spawning a new one.")]
+    public bool clearOldFinishHoleVisual = true;
+
     [Header("Editor")]
     [Tooltip("If on, the generator will refresh when you tweak values in the inspector.")]
     public bool autoRegenerateOnValidate = true;
 
     readonly List<GameObject> _generated = new(); // mountains
 
+    GameObject _spawnedFinishHoleVisual;
+
     [Header("Caves")]
     public CaveGenerator caveGenerator;
+
+    [Header("Shortcuts")]
+    public ShortcutGenerator shortcutGenerator;
 
     [Header("Obstacles")]
     public ObstaclePlacement2D obstaclePlacer;
 
-
-    // -------- LibTess settings --------
     [Header("LibTess Fill Settings")]
     [Tooltip("How much to scale positions before tessellating (avoids floating precision issues).")]
     public float tessScale = 1000f;
@@ -99,16 +114,13 @@ public class PerlinMountain2D : MonoBehaviour
     public bool tessInvertWinding = false;
 
     [Header("Fill Bottom Extension")]
-    
     public float fallbackFillDepth = 50f;    // used if no camera found / not ortho
-
 
     void Start()
     {
         if (!Application.isPlaying) return;
         GenerateNow(); // always generates a new map when the scene loads
     }
-
 
 #if UNITY_EDITOR
     bool _prefabChecked;
@@ -142,14 +154,13 @@ public class PerlinMountain2D : MonoBehaviour
 
         if (useRandomSeed)
             seed = unchecked((int)System.DateTime.UtcNow.Ticks);
+
         Random.InitState(seed);
 
         ClearGenerated();
 
         // Always extend fill deep enough so camera/map preview never reveals the bottom
         float fillCloseY = baseY - fallbackFillDepth;
-
-
 
         float cursorX = 0f;
         for (int m = 0; m < mountainCount; m++)
@@ -172,9 +183,13 @@ public class PerlinMountain2D : MonoBehaviour
                 caveGenerator.ApplyFakeCaves(surface, baseY, cursorX, mountainWidth, seed + 100 * m);
             }
 
+            if (shortcutGenerator != null)
+            {
+                shortcutGenerator.ApplyShortcuts(surface, baseY, cursorX, mountainWidth, seed + 5000 + 100 * m);
+            }
+
             var polygon = BuildClosedPolygon(surface, fillCloseY);
             var colliderPoly = BuildClosedPolygon(surface, baseY);
-
 
             // Clean polygon for collider stability
             RemoveNearDuplicates(polygon, 0.0001f);
@@ -184,7 +199,6 @@ public class PerlinMountain2D : MonoBehaviour
             RemoveNearDuplicates(colliderPoly, 0.0001f);
             RemoveCollinear(colliderPoly, 0.0001f);
             RemoveBacktrackingSpikes(colliderPoly, 0.0001f);
-
 
             if (fillMountain)
             {
@@ -226,11 +240,16 @@ public class PerlinMountain2D : MonoBehaviour
                 );
             }
 
-
             if (m == 0)
             {
                 AlignGroundToMountainStart(surface);
                 SpawnGameplayObjects();
+            }
+
+            // Place the actual visual golf hole only on the last mountain.
+            if (m == mountainCount - 1)
+            {
+                PlaceFinishHoleVisual(surface);
             }
 
             _generated.Add(mountainGO);
@@ -240,11 +259,42 @@ public class PerlinMountain2D : MonoBehaviour
 
     void ClearGenerated()
     {
+        // clear finish hole by tracked reference
+        if (_spawnedFinishHoleVisual != null)
+        {
+            if (Application.isPlaying) Destroy(_spawnedFinishHoleVisual);
+            else DestroyImmediate(_spawnedFinishHoleVisual);
+
+            _spawnedFinishHoleVisual = null;
+        }
+
+        // also clear any leftover Golf Hole objects by name
+        var extraToDestroy = new List<GameObject>();
+        foreach (Transform child in transform)
+        {
+            if (!child) continue;
+
+            if (child.name.StartsWith("Golf Hole"))
+                extraToDestroy.Add(child.gameObject);
+        }
+
+        for (int i = 0; i < extraToDestroy.Count; i++)
+        {
+            var go = extraToDestroy[i];
+            if (!go) continue;
+
+            if (Application.isPlaying) Destroy(go);
+            else DestroyImmediate(go);
+        }
+
+        if (shortcutGenerator != null)
+            shortcutGenerator.ClearGeneratedVisuals();
+
         // clear obstacles first (this will destroy Obstacles_Root and null the reference)
         if (obstaclePlacer != null)
             obstaclePlacer.Clear();
 
-        // destroy any leftover mountain children (even if _generated list got out of sync)
+        // destroy any leftover mountain children
         var toDestroy = new List<GameObject>();
         foreach (Transform child in transform)
         {
@@ -265,10 +315,6 @@ public class PerlinMountain2D : MonoBehaviour
 
         _generated.Clear();
     }
-
-
-
-
 
     List<Vector3> BuildSurfacePoints(float startX, float groundY, float width, float step, float amp, float freq, int seedLocal)
     {
@@ -323,7 +369,6 @@ public class PerlinMountain2D : MonoBehaviour
                 pts.Add(new Vector3(x, y, 0f));
             }
 
-
             prevY = y;
         }
 
@@ -349,7 +394,6 @@ public class PerlinMountain2D : MonoBehaviour
 
         return poly;
     }
-
 
     void AlignGroundToMountainStart(List<Vector3> surface)
     {
@@ -405,6 +449,120 @@ public class PerlinMountain2D : MonoBehaviour
         }
     }
 
+    void PlaceFinishHoleVisual(List<Vector3> surface)
+    {
+        if (finishHoleVisualPrefab == null || surface == null || surface.Count < 2)
+            return;
+
+        if (clearOldFinishHoleVisual && _spawnedFinishHoleVisual != null)
+        {
+            if (Application.isPlaying) Destroy(_spawnedFinishHoleVisual);
+            else DestroyImmediate(_spawnedFinishHoleVisual);
+
+            _spawnedFinishHoleVisual = null;
+        }
+
+        // Only search for the end edge in the last portion of the mountain,
+        // so we do not accidentally grab cave/shortcut/internal verticals.
+        float maxX = surface[surface.Count - 1].x;
+        float searchStartX = maxX - 4f; // adjust if needed
+
+        int edgeTopIndex = -1;
+
+        for (int i = 0; i < surface.Count - 1; i++)
+        {
+            Vector3 a = surface[i];
+            Vector3 b = surface[i + 1];
+
+            bool inEndZone = a.x >= searchStartX && b.x >= searchStartX;
+            bool sameX = Mathf.Abs(a.x - b.x) < 0.0001f;
+            bool goesDown = b.y < a.y;
+
+            if (inEndZone && sameX && goesDown)
+            {
+                edgeTopIndex = i;
+            }
+        }
+
+        // Fallback: use the last point if no valid end-edge vertical was found
+        if (edgeTopIndex < 0)
+        {
+            edgeTopIndex = surface.Count - 1;
+        }
+
+        Vector3 localEdgeTopPoint = surface[edgeTopIndex];
+        Vector3 worldEdgeTopPoint = transform.TransformPoint(localEdgeTopPoint);
+
+        _spawnedFinishHoleVisual = Instantiate(
+            finishHoleVisualPrefab,
+            worldEdgeTopPoint,
+            finishHoleVisualPrefab.transform.rotation,
+            transform
+        );
+
+        _spawnedFinishHoleVisual.name = "Golf Hole";
+
+        Transform wallR = FindChildRecursive(_spawnedFinishHoleVisual.transform, "Wall_R");
+        Transform floor = FindChildRecursive(_spawnedFinishHoleVisual.transform, "Floor");
+
+        if (wallR == null)
+        {
+            Debug.LogWarning("Golf Hole: Could not find child named 'Wall_R'.");
+            _spawnedFinishHoleVisual.transform.position += finishHoleVisualOffset;
+            return;
+        }
+
+        Renderer wallRRenderer = wallR.GetComponent<Renderer>();
+        if (wallRRenderer == null)
+        {
+            Debug.LogWarning("Golf Hole: 'Wall_R' has no Renderer.");
+            _spawnedFinishHoleVisual.transform.position += finishHoleVisualOffset;
+            return;
+        }
+
+        // Align the RIGHT side of Wall_R to the detected end edge
+        float desiredWallRRightX = worldEdgeTopPoint.x - finishHoleEdgeInset;
+        float currentWallRRightX = wallRRenderer.bounds.max.x;
+        float deltaX = desiredWallRRightX - currentWallRRightX;
+
+        Vector3 pos = _spawnedFinishHoleVisual.transform.position;
+        pos.x += deltaX;
+        _spawnedFinishHoleVisual.transform.position = pos;
+
+        // Align floor bottom to ledge height
+        if (floor != null)
+        {
+            Renderer floorRenderer = floor.GetComponent<Renderer>();
+            if (floorRenderer != null)
+            {
+                float currentFloorBottomY = floorRenderer.bounds.min.y;
+                float desiredFloorBottomY = worldEdgeTopPoint.y;
+                float deltaY = desiredFloorBottomY - currentFloorBottomY;
+
+                pos = _spawnedFinishHoleVisual.transform.position;
+                pos.y += deltaY;
+                _spawnedFinishHoleVisual.transform.position = pos;
+            }
+        }
+
+        _spawnedFinishHoleVisual.transform.position += finishHoleVisualOffset;
+    }
+
+    Transform FindChildRecursive(Transform parent, string childName)
+    {
+        if (parent.name == childName)
+            return parent;
+
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform result = FindChildRecursive(parent.GetChild(i), childName);
+            if (result != null)
+                return result;
+        }
+
+        return null;
+    }
+
     void OnEnable()
     {
 #if UNITY_EDITOR
@@ -455,8 +613,6 @@ public class PerlinMountain2D : MonoBehaviour
         RemoveNearDuplicates(work, 0.0001f);
         RemoveCollinear(work, 0.0001f);
         RemoveBacktrackingSpikes(work, 0.0001f);
-
-
 
         if (work.Count < 3)
             return;
@@ -567,7 +723,6 @@ public class PerlinMountain2D : MonoBehaviour
             }
         }
     }
-
 
     static void RemoveNearDuplicates(List<Vector3> pts, float eps = 0.0001f)
     {

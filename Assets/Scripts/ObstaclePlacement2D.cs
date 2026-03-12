@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 
 /// <summary>
 /// Spawns obstacle prefabs along a generated 2D terrain surface.
 /// - Uses a local System.Random so it does NOT mess with UnityEngine.Random state.
 /// - Spawns on the surface Y at random X positions, with spacing / edge padding / spawn avoidance.
+/// - Randomly assigns red or blue anaglyph settings to spawned obstacles.
 /// </summary>
 public class ObstaclePlacement2D : MonoBehaviour
 {
@@ -51,6 +53,13 @@ public class ObstaclePlacement2D : MonoBehaviour
     [Header("Parenting")]
     [Tooltip("Obstacles will be parented here (auto-created if null).")]
     public Transform obstaclesRoot;
+
+    [Header("Anaglyph Settings")]
+    [Tooltip("Assign: Blue Anaglyph Settings (Anaglyph Color Settings)")]
+    public AnaglyphColorSettings blueAnaglyphSettings;
+
+    [Tooltip("Assign: Red Blue Anaglyph Settings (Anaglyph Color Settings)")]
+    public AnaglyphColorSettings redAnaglyphSettings;
 
     readonly List<GameObject> _spawned = new();
 
@@ -125,20 +134,54 @@ public class ObstaclePlacement2D : MonoBehaviour
                 if (alignToSlope) rot = Quaternion.Euler(0f, 0f, angleDeg);
 
                 GameObject obj = Instantiate(prefab, worldPos, rot, obstaclesRoot);
+
+                AssignRandomAnaglyphSettings(obj, rng);
+
                 _spawned.Add(obj);
 
                 placed = true;
                 break;
             }
 
-            // if not placed, just skip
             if (!placed) { }
         }
     }
 
+    void AssignRandomAnaglyphSettings(GameObject obj, System.Random rng)
+    {
+        if (obj == null) return;
+
+        AnaglyphRenderingController controller = obj.GetComponentInChildren<AnaglyphRenderingController>(true);
+        if (controller == null) return;
+
+        AnaglyphColorSettings chosenSettings = rng.Next(0, 2) == 0
+            ? blueAnaglyphSettings
+            : redAnaglyphSettings;
+
+        if (chosenSettings == null) return;
+
+        FieldInfo colorSettingsField = typeof(AnaglyphRenderingController).GetField(
+            "colorSettings",
+            BindingFlags.Instance | BindingFlags.NonPublic
+        );
+
+        if (colorSettingsField == null) return;
+
+        colorSettingsField.SetValue(controller, chosenSettings);
+
+        MethodInfo cacheRenderersMethod = typeof(AnaglyphRenderingController).GetMethod(
+            "CacheRenderers",
+            BindingFlags.Instance | BindingFlags.NonPublic
+        );
+
+        if (cacheRenderersMethod != null)
+            cacheRenderersMethod.Invoke(controller, null);
+
+        controller.ApplyHSVAdjustment();
+    }
+
     public void Clear()
     {
-        // destroy spawned obstacles
         for (int i = _spawned.Count - 1; i >= 0; i--)
         {
             var go = _spawned[i];
@@ -149,11 +192,10 @@ public class ObstaclePlacement2D : MonoBehaviour
         }
         _spawned.Clear();
 
-        // also destroy the root so we don't keep parenting to a "pending destroy" object
         if (obstaclesRoot != null)
         {
             var rootGO = obstaclesRoot.gameObject;
-            obstaclesRoot = null; // <- key: reset reference immediately
+            obstaclesRoot = null;
 
             if (rootGO != null)
             {
@@ -163,12 +205,10 @@ public class ObstaclePlacement2D : MonoBehaviour
         }
     }
 
-
     void EnsureRoot(Transform generatorTransform)
     {
         if (obstaclesRoot != null) return;
 
-        // Create a child root under the generator so everything stays organized
         var rootGO = new GameObject("Obstacles_Root");
         rootGO.transform.SetParent(generatorTransform, false);
         obstaclesRoot = rootGO.transform;
@@ -192,23 +232,19 @@ public class ObstaclePlacement2D : MonoBehaviour
 
     static float Lerp(float a, float b, float t) => a + (b - a) * Mathf.Clamp01(t);
 
-    // ---------------- surface sampling (LOCAL space) ----------------
-
     float SampleSurfaceY_Local(List<Vector3> surface, float x)
     {
         bool found = false;
         float bestY = float.NegativeInfinity;
 
-        // Scan ALL forward-x segments and take the highest Y at this X
         for (int i = 1; i < surface.Count; i++)
         {
             Vector3 a = surface[i - 1];
             Vector3 b = surface[i];
 
             float dx = b.x - a.x;
-            if (dx <= 0.0001f) continue; // skip vertical stair segments
+            if (dx <= 0.0001f) continue;
 
-            // segment covers x?
             if (a.x <= x && x <= b.x)
             {
                 float t = Mathf.InverseLerp(a.x, b.x, x);
@@ -225,7 +261,6 @@ public class ObstaclePlacement2D : MonoBehaviour
         if (found)
             return bestY;
 
-        // fallback: nearest point
         bestY = surface[0].y;
         float bestD = Mathf.Abs(surface[0].x - x);
 
@@ -241,7 +276,6 @@ public class ObstaclePlacement2D : MonoBehaviour
 
         return bestY;
     }
-
 
     float SampleSurfaceAngleDeg_Local(List<Vector3> surface, float x)
     {
