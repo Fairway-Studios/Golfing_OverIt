@@ -699,7 +699,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: d430f4c74bd72db41a726e0bb37881e5, type: 3}
   - {fileID: 8300000, guid: 71852a1a053c7f2429706c6277f53b4c, type: 3}
   - {fileID: 8300000, guid: d8e91fc40efdc27468164b2617dd1390, type: 3}
-  swapClubsSFX: {fileID: 8300000, guid: fdaccadd461073c4fb8ac4b553c4d75e, type: 3}
+  swapClubsSFX: {fileID: 8300000, guid: a86c46af772e04149a7870cfc14774a4, type: 3}
 --- !u!255 &6149565543543606879
 FixedJoint2D:
   m_ObjectHideFlags: 0
@@ -5624,6 +5624,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 88cb305a8d150dc48871ca0ab9e40dfb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  colorSettings: {fileID: 0}
 --- !u!1 &3465663659582904329
 GameObject:
   m_ObjectHideFlags: 0
