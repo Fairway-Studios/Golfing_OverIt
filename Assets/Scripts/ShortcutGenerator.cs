@@ -1,441 +1,445 @@
 using System.Collections.Generic;
 using UnityEngine;
+using LibTessDotNet;
 
 /// <summary>
-/// Generates foddian-style shortcuts on procedural mountains.
+/// Creates a tunnel shortcut through a mountain peak by splitting it into
+/// two separate GameObjects:
 ///
-/// Two shortcut types:
+///   BOTTOM PIECE — the original mountain mesh, capped flat at cutY.
+///   TOP PIECE    — everything above cutY, shifted up by gapSize world units.
 ///
-/// SADDLE CUT — carves a gap through the highest peak on the mountain.
-///   Looks like a tempting shortcut over the top, but the narrow passage
-///   makes it easy to slip back down. Width is randomised — sometimes
-///   wide and obvious, sometimes narrow and deceptive.
+/// The gap between the two pieces IS the tunnel. The ball rolls through it.
+/// Both pieces get their own MeshRenderer (fill) and PolygonCollider2D.
 ///
-///   ?????   ?????
-///   ?????   ?????
-///       ?????
+/// This replaces the original mountainGO fill mesh and collider, so it must
+/// be called INSTEAD of the normal fill/collider setup for that mountain,
+/// OR after — in which case it destroys and replaces them.
 ///
-/// NARROW LEDGE — carves a thin flat (or subtly downward-sloping) shelf
-///   into a steep section of the mountain. Tempting resting spot mid-climb,
-///   but sloped ledges punish the player by sliding them back.
+/// Hook-up: call from PerlinMountain2D AFTER BuildClosedPolygon but the
+/// simplest integration is via ApplyShortcuts (before BuildClosedPolygon)
+/// which modifies nothing and instead stores tunnel data, then
+/// SpawnTunnelPieces is called after the mountain GO is built.
 ///
-///        ????
-///   ?????????
-///        ????
-///
-/// Hook-up (already in PerlinMountain2D.Regenerate):
-///   shortcutGenerator.ApplyShortcuts(surface, baseY, cursorX, mountainWidth, seed + 5000 + 100*m);
+/// Simplest hook-up — add after the collider block in Regenerate():
+///   if (shortcutGenerator != null)
+///       shortcutGenerator.SpawnTunnelForMountain(
+///           surface, baseY, cursorX, mountainWidth,
+///           seed + 5000 + 100 * m, mountainGO,
+///           fillColor, fillSortingOrder, outlineWidth, mountainColor,
+///           tessScale, tessInvertWinding);
 /// </summary>
 public class ShortcutGenerator : MonoBehaviour
 {
-    [Header("Generation")]
-    [Tooltip("Minimum number of shortcuts to place per mountain.")]
-    [Min(0)] public int minShortcutsPerMountain = 1;
-    [Tooltip("Maximum number of shortcuts to place per mountain.")]
-    [Min(1)] public int maxShortcutsPerMountain = 2;
+    [Header("Enable")]
+    public bool spawnTunnels = true;
 
-    [Header("Saddle Cut")]
-    [Tooltip("Minimum width of the saddle gap (narrow = deceptive/hard).")]
-    public float saddleMinWidth = 2f;
-    [Tooltip("Maximum width of the saddle gap (wide = obvious/easier).")]
-    public float saddleMaxWidth = 6f;
-    [Tooltip("How deep the saddle cuts down from the peak. " +
-             "Larger = more dramatic gap.")]
-    public float saddleDepth = 3f;
-    [Tooltip("Minimum peak height above baseY to be eligible for a saddle cut.")]
-    public float saddleMinPeakHeight = 4f;
+    [Header("Tunnel Shape")]
+    [Tooltip("Where on the peak the cut is made. 0=base, 1=top. 0.3 = lower third.")]
+    [Range(0.1f, 0.8f)]
+    public float cutHeightFraction = 0.3f;
 
-    [Header("Narrow Ledge")]
-    [Tooltip("Width of the ledge platform.")]
-    public float ledgeMinWidth = 3f;
-    public float ledgeMaxWidth = 7f;
-    [Tooltip("Depth the ledge is cut into the mountain face (how far it sticks out).")]
-    public float ledgeDepth = 1.5f;
-    [Tooltip("Chance (0-1) that a ledge slopes downward — punishing the player.")]
-    [Range(0f, 1f)] public float trapLedgeChance = 0.5f;
-    [Tooltip("How much a trap ledge slopes downward (world units drop across ledge width).")]
-    public float trapLedgeSlope = 0.4f;
-    [Tooltip("Minimum height above baseY for a point to be eligible for a ledge.")]
-    public float ledgeMinHeight = 3f;
-    [Tooltip("Skip this many points from each mountain edge when placing ledges.")]
-    public int ledgeEdgePadding = 10;
+    [Tooltip("Randomise cut height each generation.")]
+    [Range(0f, 0.2f)]
+    public float cutHeightRandomness = 0.08f;
+
+    [Tooltip("How far the top piece shifts UP to create the visible gap.")]
+    public float gapSize = 1.5f;
+
+    [Header("Peak Requirements")]
+    [Tooltip("Peak must be at least this tall above baseY.")]
+    public float minPeakHeight = 3f;
+
+    [Tooltip("Minimum horizontal width of the peak at cutY (tunnel width).")]
+    public float minTunnelWidth = 3f;
+
+    [Header("Sorting Orders")]
+    [Tooltip("Sorting order for the top piece fill mesh.")]
+    public int topPieceSortingOrder = -8;
+
+    [Tooltip("Sorting order for the top piece outline.")]
+    public int topPieceOutlineSortingOrder = 0;
 
     [Header("Attempts")]
-    [Range(1, 50)] public int maxAttempts = 20;
+    [Range(1, 20)] public int maxAttempts = 10;
 
-    [Header("Debug Visual")]
-    public bool drawDebugLine = true;
-    public Color saddleDebugColor = Color.red;
-    public Color ledgeDebugColor = new Color(1f, 0.5f, 0f); // orange
-    [Min(0.05f)] public float debugWidth = 0.3f;
-    public int debugSortingOrder = 50;
-
-    [Header("Diagnostics")]
-    public bool logDiagnostics = false;
-
-    Transform _debugRoot;
-    readonly List<GameObject> _debugLines = new();
+    readonly List<GameObject> _spawnedPieces = new();
 
     // -----------------------------------------------------------------------
-    // Public API
+    // Legacy no-op — keeps existing ApplyShortcuts call compiling
     // -----------------------------------------------------------------------
-
     public void ApplyShortcuts(
-        List<Vector3> surface,
-        float baseY,
-        float mountainStartX,
-        float mountainWidth,
-        int seed)
-    {
-        if (surface == null || surface.Count < 20) return;
-
-        var rng = new System.Random(seed);
-        float mountainEndX = mountainStartX + mountainWidth;
-
-        int count = rng.Next(minShortcutsPerMountain, maxShortcutsPerMountain + 1);
-
-        // Build a pool of shortcut types, pick randomly
-        // We attempt each type and stop once we've placed enough
-        var types = new List<int> { 0, 1 }; // 0 = saddle, 1 = ledge
-        Shuffle(types, rng);
-
-        int placed = 0;
-        foreach (int type in types)
-        {
-            if (placed >= count) break;
-
-            bool success = type == 0
-                ? TryPlaceSaddle(surface, baseY, mountainStartX, mountainEndX, rng)
-                : TryPlaceLedge(surface, baseY, mountainStartX, mountainEndX, rng);
-
-            if (success) placed++;
-        }
-
-        // If we haven't hit count yet, try both types again with more attempts
-        for (int i = 0; i < maxAttempts && placed < count; i++)
-        {
-            bool success = rng.NextDouble() < 0.5f
-                ? TryPlaceSaddle(surface, baseY, mountainStartX, mountainEndX, rng)
-                : TryPlaceLedge(surface, baseY, mountainStartX, mountainEndX, rng);
-            if (success) placed++;
-        }
-
-        if (logDiagnostics)
-            Debug.Log($"[ShortcutGen] Placed {placed}/{count} shortcuts on mountain x=[{mountainStartX:F0},{mountainEndX:F0}]");
-    }
+        List<Vector3> surface, float baseY,
+        float mountainStartX, float mountainWidth, int seed)
+    { }
 
     public void ClearGeneratedVisuals()
     {
-        for (int i = _debugLines.Count - 1; i >= 0; i--)
+        for (int i = _spawnedPieces.Count - 1; i >= 0; i--)
         {
-            var go = _debugLines[i];
+            var go = _spawnedPieces[i];
             if (!go) continue;
             if (Application.isPlaying) Destroy(go);
             else DestroyImmediate(go);
         }
-        _debugLines.Clear();
-
-        if (_debugRoot != null)
-        {
-            var rootGO = _debugRoot.gameObject;
-            _debugRoot = null;
-            if (rootGO != null)
-            {
-                if (Application.isPlaying) Destroy(rootGO);
-                else DestroyImmediate(rootGO);
-            }
-        }
+        _spawnedPieces.Clear();
     }
 
     // -----------------------------------------------------------------------
-    // SADDLE CUT
-    // Finds the highest point on the surface, carves a gap of random width
-    // centred on it, cutting down by saddleDepth.
+    // Main entry — call after PolygonCollider2D is added to mountainGO
     // -----------------------------------------------------------------------
-
-    bool TryPlaceSaddle(
-        List<Vector3> surface,
+    public void SpawnTunnelForMountain(
+        List<Vector3> surfaceLocal,
         float baseY,
         float mountainStartX,
-        float mountainEndX,
-        System.Random rng)
+        float mountainWidth,
+        int seed,
+        GameObject mountainGO,
+        Color fillColor,
+        int fillSortingOrder,
+        float outlineWidth,
+        Color outlineColor,
+        float tessScale,
+        bool tessInvertWinding)
     {
-        // Find the highest surface point (excluding edge padding)
-        int peakIdx = -1;
-        float peakY = float.MinValue;
+        if (!spawnTunnels) return;
+        if (surfaceLocal == null || surfaceLocal.Count < 6) return;
+        if (mountainGO == null) return;
 
-        int start = 5;
-        int end = surface.Count - 6;
-        if (end <= start) return false;
+        var rng = new System.Random(seed);
+        float mountainEndX = mountainStartX + mountainWidth;
 
-        for (int i = start; i <= end; i++)
+        // Find the best peak
+        int peakIdx = FindBestPeak(surfaceLocal, baseY, mountainStartX, mountainEndX);
+        if (peakIdx < 0)
         {
-            float x = surface[i].x;
-            if (x < mountainStartX + 5f || x > mountainEndX - 5f) continue;
-            if (surface[i].y > peakY)
-            {
-                peakY = surface[i].y;
-                peakIdx = i;
-            }
+            //Debug.Log($"[ShortcutGen] No peak found on x=[{mountainStartX:F0},{mountainEndX:F0}]. " + $"Lower minPeakHeight ({minPeakHeight}).");
+            return;
         }
 
-        if (peakIdx < 0) return false;
-        if (peakY - baseY < saddleMinPeakHeight) return false;
+        float peakY = surfaceLocal[peakIdx].y;
+        float peakH = peakY - baseY;
 
-        float peakX = surface[peakIdx].x;
-        float saddleW = Mathf.Lerp(saddleMinWidth, saddleMaxWidth, (float)rng.NextDouble());
-        float halfW = saddleW * 0.5f;
-        float saddleY = peakY - saddleDepth;
+        // Randomise cut fraction
+        float frac = cutHeightFraction
+                     + ((float)rng.NextDouble() * 2f - 1f) * cutHeightRandomness;
+        frac = Mathf.Clamp(frac, 0.1f, 0.75f);
+        float cutY = baseY + peakH * frac;
 
-        // Clamp saddleY so it doesn't go below baseY + margin
-        saddleY = Mathf.Max(saddleY, baseY + 0.5f);
+        // Find left and right crossings at cutY
+        int leftIdx = FindCrossingLeft(surfaceLocal, peakIdx, cutY);
+        int rightIdx = FindCrossingRight(surfaceLocal, peakIdx, cutY);
 
-        float entryX = peakX - halfW;
-        float exitX = peakX + halfW;
-
-        // Clamp to mountain bounds
-        entryX = Mathf.Max(entryX, mountainStartX + 2f);
-        exitX = Mathf.Min(exitX, mountainEndX - 2f);
-        if (exitX - entryX < 1f) return false;
-
-        // Find surface indices bracketing entryX and exitX
-        int entryIdx = FindIndexJustBefore(surface, entryX);
-        int exitIdx = FindIndexJustAfter(surface, exitX);
-
-        if (entryIdx < 0 || exitIdx < 0 || entryIdx >= exitIdx) return false;
-
-        // Sample surface Y at entry and exit for smooth joins
-        float entryY = SampleSurfaceY(surface, entryX);
-        float exitY = SampleSurfaceY(surface, exitX);
-
-        // Build the saddle shape:
-        //   entryX/entryY ? slope down to saddle floor ? slope up to exitX/exitY
-        var saddle = new List<Vector3>
+        if (leftIdx < 0 || rightIdx < 0)
         {
-            new Vector3(entryX, entryY,  0f),   // join left side of surface
-            new Vector3(entryX, saddleY, 0f),   // drop to saddle floor
-            new Vector3(exitX,  saddleY, 0f),   // flat saddle bottom
-            new Vector3(exitX,  exitY,   0f),   // rise back to surface
-        };
+            //Debug.Log($"[ShortcutGen] Could not find crossings at cutY={cutY:F1}");
+            return;
+        }
 
-        RemoveNearDuplicates(saddle, 0.001f);
+        // Exact X positions of crossings
+        float entryX = InterpolateXAtY(surfaceLocal, leftIdx, leftIdx + 1, cutY);
+        float exitX = InterpolateXAtY(surfaceLocal, rightIdx, rightIdx - 1, cutY);
 
-        // Splice into surface
-        int removeStart = entryIdx + 1;
-        int removeCount = exitIdx - entryIdx - 1;
-        if (removeCount < 0) removeCount = 0;
-        if (removeStart + removeCount > surface.Count) return false;
+        if (exitX - entryX < minTunnelWidth)
+        {
+            //Debug.Log($"[ShortcutGen] Tunnel too narrow ({exitX - entryX:F1} < {minTunnelWidth})");
+            return;
+        }
 
-        surface.RemoveRange(removeStart, removeCount);
-        surface.InsertRange(removeStart, saddle);
+        //Debug.Log($"[ShortcutGen] ? Tunnel: peak=({surfaceLocal[peakIdx].x:F1},{peakY:F1}) " + $"cutY={cutY:F1} entry={entryX:F1} exit={exitX:F1} " + $"width={exitX - entryX:F1} gap={gapSize}");
 
-        if (drawDebugLine) DrawDebugLine(saddle, saddleDebugColor);
+        // Build bottom polygon — original surface but with peak section capped at cutY
+        var bottomSurface = BuildBottomSurface(surfaceLocal, leftIdx, rightIdx, cutY, entryX, exitX);
 
-        if (logDiagnostics)
-            Debug.Log($"[ShortcutGen] Saddle placed at x=[{entryX:F1},{exitX:F1}] " +
-                      $"width={saddleW:F1} peakY={peakY:F2} saddleY={saddleY:F2}");
+        // Build top polygon — only the peak cap above cutY, shifted up
+        var topSurface = BuildTopSurface(surfaceLocal, leftIdx, rightIdx, cutY, entryX, exitX, gapSize);
 
-        return true;
+        // Replace the original mountainGO fill and collider with the bottom piece
+        ReplaceMountainWithBottom(mountainGO, bottomSurface, baseY,
+            fillColor, fillSortingOrder, outlineWidth, outlineColor,
+            tessScale, tessInvertWinding);
+
+        // Spawn the top piece as a sibling GameObject
+        var topGO = new GameObject($"TunnelTop_{_spawnedPieces.Count}");
+        topGO.transform.SetParent(mountainGO.transform.parent, false);
+        _spawnedPieces.Add(topGO);
+
+        BuildTopPiece(topGO, topSurface, cutY + gapSize,
+            fillColor, fillSortingOrder, outlineWidth, outlineColor,
+            tessScale, tessInvertWinding);
     }
 
     // -----------------------------------------------------------------------
-    // NARROW LEDGE
-    // Finds a point on the surface that is elevated and has a steep neighbour,
-    // carves a horizontal shelf into the slope.
-    // Randomly either flat (fair) or slightly downward-sloping (trap).
+    // Build bottom surface — original surface with peak replaced by flat cap at cutY
     // -----------------------------------------------------------------------
 
-    bool TryPlaceLedge(
+    List<Vector3> BuildBottomSurface(
         List<Vector3> surface,
-        float baseY,
-        float mountainStartX,
-        float mountainEndX,
-        System.Random rng)
+        int leftIdx, int rightIdx,
+        float cutY, float entryX, float exitX)
     {
-        // Collect eligible surface points: elevated, inside bounds, not at edges
-        var candidates = new List<int>();
+        var pts = new List<Vector3>();
 
-        int start = Mathf.Clamp(ledgeEdgePadding, 0, surface.Count - 2);
-        int end = Mathf.Clamp(surface.Count - ledgeEdgePadding - 1, 0, surface.Count - 2);
+        // Points before the left crossing (left approach, ascending)
+        for (int i = 0; i <= leftIdx; i++)
+            pts.Add(surface[i]);
 
-        for (int i = start; i <= end; i++)
+        // Cap: entry point at cutY, flat across, exit at cutY
+        pts.Add(new Vector3(entryX, cutY, 0f));
+        pts.Add(new Vector3(exitX, cutY, 0f));
+
+        // Points after the right crossing (right descend)
+        for (int i = rightIdx; i < surface.Count; i++)
+            pts.Add(surface[i]);
+
+        RemoveNearDuplicates(pts, 0.001f);
+        return pts;
+    }
+
+    // -----------------------------------------------------------------------
+    // Build top surface — just the peak cap above cutY, shifted up
+    // -----------------------------------------------------------------------
+
+    List<Vector3> BuildTopSurface(
+    List<Vector3> surface,
+    int leftIdx, int rightIdx,
+    float cutY, float entryX, float exitX,
+    float shift)
+    {
+        var pts = new List<Vector3>();
+
+        // Start at left cut point
+        pts.Add(new Vector3(entryX, cutY + shift, 0f));
+
+        // Add original mountain top points between crossings
+        for (int i = leftIdx + 1; i < rightIdx; i++)
+            pts.Add(new Vector3(surface[i].x, surface[i].y + shift, 0f));
+
+        // End at right cut point
+        pts.Add(new Vector3(exitX, cutY + shift, 0f));
+
+        RemoveNearDuplicates(pts, 0.001f);
+        return pts;
+    }
+
+    // -----------------------------------------------------------------------
+    // Replace mountain fill mesh and collider with bottom piece geometry
+    // -----------------------------------------------------------------------
+
+    void ReplaceMountainWithBottom(
+        GameObject mountainGO,
+        List<Vector3> bottomSurface,
+        float baseY,
+        Color fillColor, int fillSortingOrder,
+        float outlineWidth, Color outlineColor,
+        float tessScale, bool tessInvertWinding)
+    {
+        // Remove existing MeshFilter/MeshRenderer (fill) and LineRenderer (outline)
+        var existingMF = mountainGO.GetComponent<MeshFilter>();
+        var existingMR = mountainGO.GetComponent<MeshRenderer>();
+        var existingLR = mountainGO.GetComponent<LineRenderer>();
+        var existingCol = mountainGO.GetComponent<PolygonCollider2D>();
+
+        if (existingMF)
+        {
+            if (Application.isPlaying) Destroy(existingMF);
+            else DestroyImmediate(existingMF);
+        }
+        if (existingMR)
+        {
+            if (Application.isPlaying) Destroy(existingMR);
+            else DestroyImmediate(existingMR);
+        }
+        if (existingLR)
+        {
+            if (Application.isPlaying) Destroy(existingLR);
+            else DestroyImmediate(existingLR);
+        }
+        if (existingCol)
+        {
+            if (Application.isPlaying) Destroy(existingCol);
+            else DestroyImmediate(existingCol);
+        }
+
+        // Build closed polygon for fill (extend down for fill depth)
+        float fillCloseY = baseY - 50f;
+        var fillPoly = BuildClosedPolygon(bottomSurface, fillCloseY);
+        var colPoly = BuildClosedPolygon(bottomSurface, baseY);
+
+        CleanPolygon(fillPoly);
+        CleanPolygon(colPoly);
+
+        // Fill mesh
+        AddFillMesh(mountainGO, fillPoly, fillColor, fillSortingOrder, tessScale, tessInvertWinding);
+
+        // Outline
+        var lr = mountainGO.AddComponent<LineRenderer>();
+        lr.loop = false;
+        lr.positionCount = bottomSurface.Count;
+        lr.useWorldSpace = false;
+        lr.widthMultiplier = outlineWidth;
+        lr.material = new Material(Shader.Find("Sprites/Default"));
+        lr.startColor = outlineColor;
+        lr.endColor = outlineColor;
+        lr.SetPositions(bottomSurface.ToArray());
+
+        // Collider
+        var col = mountainGO.AddComponent<PolygonCollider2D>();
+        var v2 = new Vector2[colPoly.Count];
+        for (int i = 0; i < colPoly.Count; i++) v2[i] = colPoly[i];
+        col.pathCount = 1;
+        col.SetPath(0, v2);
+    }
+
+    // -----------------------------------------------------------------------
+    // Build the floating top piece GameObject
+    // -----------------------------------------------------------------------
+
+    void BuildTopPiece(
+        GameObject topGO,
+        List<Vector3> topSurface,
+        float closeY,
+        Color fillColor, int fillSortingOrder,
+        float outlineWidth, Color outlineColor,
+        float tessScale, bool tessInvertWinding)
+    {
+        if (topSurface.Count < 3) return;
+
+        var fillPoly = BuildClosedPolygon(topSurface, closeY);
+        var colPoly = BuildClosedPolygon(topSurface, closeY);
+
+        CleanPolygon(fillPoly);
+        CleanPolygon(colPoly);
+
+        if (fillPoly.Count < 3) return;
+
+        // Fill
+        AddFillMesh(topGO, fillPoly, fillColor, topPieceSortingOrder, tessScale, tessInvertWinding);
+
+        // Outline
+        var lr = topGO.AddComponent<LineRenderer>();
+        lr.loop = true;
+        lr.positionCount = fillPoly.Count;
+        lr.useWorldSpace = false;
+        lr.widthMultiplier = outlineWidth;
+        lr.material = new Material(Shader.Find("Sprites/Default"));
+        lr.startColor = outlineColor;
+        lr.endColor = outlineColor;
+        lr.sortingOrder = topPieceOutlineSortingOrder;
+        lr.SetPositions(fillPoly.ToArray());
+
+        // Collider — just the underside of the top piece acts as ceiling
+        var col = topGO.AddComponent<PolygonCollider2D>();
+        var v2 = new Vector2[colPoly.Count];
+        for (int i = 0; i < colPoly.Count; i++) v2[i] = colPoly[i];
+        col.pathCount = 1;
+        col.SetPath(0, v2);
+    }
+
+    // -----------------------------------------------------------------------
+    // Peak detection
+    // -----------------------------------------------------------------------
+
+    int FindBestPeak(List<Vector3> surface, float baseY, float minX, float maxX)
+    {
+        int bestIdx = -1;
+        float bestH = float.MinValue;
+
+        for (int i = 1; i < surface.Count - 1; i++)
         {
             float x = surface[i].x;
             float y = surface[i].y;
 
-            if (x < mountainStartX + 4f || x > mountainEndX - 4f) continue;
-            if (y - baseY < ledgeMinHeight) continue;
+            if (x < minX + 3f || x > maxX - 3f) continue;
+            if (y - baseY < minPeakHeight) continue;
 
-            candidates.Add(i);
+            // Local max (>=) to handle flat tops
+            if (y >= surface[i - 1].y && y >= surface[i + 1].y && y > bestH)
+            {
+                bestH = y;
+                bestIdx = i;
+            }
         }
 
-        if (candidates.Count == 0) return false;
-
-        // Shuffle and try each candidate
-        Shuffle(candidates, rng);
-
-        foreach (int anchorIdx in candidates)
-        {
-            float anchorX = surface[anchorIdx].x;
-            float anchorY = surface[anchorIdx].y;
-
-            float ledgeW = Mathf.Lerp(ledgeMinWidth, ledgeMaxWidth, (float)rng.NextDouble());
-            bool isTrap = rng.NextDouble() < trapLedgeChance;
-
-            // Place the ledge to the LEFT of anchor (sticks out from a rightward-rising face)
-            // or RIGHT — randomly pick direction
-            bool goLeft = rng.NextDouble() < 0.5f;
-
-            float ledgeStartX, ledgeEndX;
-            if (goLeft)
-            {
-                ledgeEndX = anchorX;
-                ledgeStartX = anchorX - ledgeW;
-            }
-            else
-            {
-                ledgeStartX = anchorX;
-                ledgeEndX = anchorX + ledgeW;
-            }
-
-            // Clamp to mountain
-            ledgeStartX = Mathf.Max(ledgeStartX, mountainStartX + 1f);
-            ledgeEndX = Mathf.Min(ledgeEndX, mountainEndX - 1f);
-            if (ledgeEndX - ledgeStartX < 1.5f) continue;
-
-            // Ledge Y: sits at anchorY - ledgeDepth (cut into the slope)
-            float ledgeBaseY = anchorY - ledgeDepth;
-            ledgeBaseY = Mathf.Max(ledgeBaseY, baseY + 0.3f);
-
-            // Trap ledge slopes downward in the direction of travel (left to right)
-            float ledgeStartY = ledgeBaseY;
-            float ledgeEndY = isTrap ? ledgeBaseY - trapLedgeSlope : ledgeBaseY;
-
-            // Find bracketing indices
-            int startIdx = FindIndexJustBefore(surface, ledgeStartX);
-            int endIdx = FindIndexJustAfter(surface, ledgeEndX);
-
-            if (startIdx < 0 || endIdx < 0 || startIdx >= endIdx) continue;
-
-            // Sample surface at ledge edges for smooth joins
-            float surfStartY = SampleSurfaceY(surface, ledgeStartX);
-            float surfEndY = SampleSurfaceY(surface, ledgeEndX);
-
-            // The ledge must actually be BELOW the current surface (cutting INTO it)
-            if (ledgeStartY >= surfStartY - 0.2f) continue;
-            if (ledgeEndY >= surfEndY - 0.2f) continue;
-
-            // Build ledge shape:
-            // Drop from surface at ledgeStartX down to ledge level,
-            // run along the ledge (flat or sloped),
-            // rise back up to surface at ledgeEndX
-            var ledge = new List<Vector3>
-            {
-                new Vector3(ledgeStartX, surfStartY,  0f),  // surface join left
-                new Vector3(ledgeStartX, ledgeStartY, 0f),  // drop to ledge
-                new Vector3(ledgeEndX,   ledgeEndY,   0f),  // ledge surface (flat or sloped)
-                new Vector3(ledgeEndX,   surfEndY,    0f),  // rise back to surface
-            };
-
-            RemoveNearDuplicates(ledge, 0.001f);
-
-            int removeStart = startIdx + 1;
-            int removeCount = endIdx - startIdx - 1;
-            if (removeCount < 0) removeCount = 0;
-            if (removeStart + removeCount > surface.Count) continue;
-
-            surface.RemoveRange(removeStart, removeCount);
-            surface.InsertRange(removeStart, ledge);
-
-            if (drawDebugLine) DrawDebugLine(ledge, ledgeDebugColor);
-
-            if (logDiagnostics)
-                Debug.Log($"[ShortcutGen] Ledge placed at x=[{ledgeStartX:F1},{ledgeEndX:F1}] " +
-                          $"isTrap={isTrap} ledgeY=[{ledgeStartY:F2},{ledgeEndY:F2}] anchorY={anchorY:F2}");
-
-            return true;
-        }
-
-        return false;
+        return bestIdx;
     }
 
-    // -----------------------------------------------------------------------
-    // Index helpers
-    // -----------------------------------------------------------------------
-
-    /// <summary>Last index whose X is <= targetX (splice point on the left).</summary>
-    int FindIndexJustBefore(List<Vector3> surface, float targetX)
+    int FindCrossingLeft(List<Vector3> surface, int fromIdx, float targetY)
     {
-        int best = -1;
-        for (int i = 0; i < surface.Count; i++)
-        {
-            if (surface[i].x <= targetX + 0.001f) best = i;
-            else break;
-        }
-        return best;
-    }
+        float peakX = surface[fromIdx].x;
+        float peakY = surface[fromIdx].y;
+        float prevY = peakY;
 
-    /// <summary>First index whose X is >= targetX (splice point on the right).</summary>
-    int FindIndexJustAfter(List<Vector3> surface, float targetX)
-    {
-        for (int i = 0; i < surface.Count; i++)
+        for (int i = fromIdx - 1; i >= 0; i--)
         {
-            if (surface[i].x >= targetX - 0.001f) return i;
+            float y = surface[i].y;
+
+            // Stop if we have gone back UP past cutY after descending
+            // (means we have crossed a valley and are on another peak)
+            if (y > prevY + 0.2f && y > targetY)
+                return -1;
+
+            if (y <= targetY)
+                return i;
+
+            prevY = y;
         }
         return -1;
     }
 
-    // -----------------------------------------------------------------------
-    // Debug visual
-    // -----------------------------------------------------------------------
-
-    void DrawDebugLine(List<Vector3> pts, Color color)
+    int FindCrossingRight(List<Vector3> surface, int fromIdx, float targetY)
     {
-        if (pts == null || pts.Count < 2) return;
-        EnsureDebugRoot();
-        var go = new GameObject($"ShortcutDebug_{_debugLines.Count}");
-        go.transform.SetParent(_debugRoot, false);
-        var lr = go.AddComponent<LineRenderer>();
-        lr.useWorldSpace = false; lr.loop = false;
-        lr.positionCount = pts.Count;
-        lr.widthMultiplier = debugWidth;
-        lr.material = new Material(Shader.Find("Sprites/Default"));
-        lr.startColor = color; lr.endColor = color;
-        lr.sortingOrder = debugSortingOrder;
-        lr.numCapVertices = 4; lr.numCornerVertices = 4;
-        lr.SetPositions(pts.ToArray());
-        _debugLines.Add(go);
+        float peakY = surface[fromIdx].y;
+        float prevY = peakY;
+
+        for (int i = fromIdx + 1; i < surface.Count; i++)
+        {
+            float y = surface[i].y;
+
+            // Stop if we have gone back UP past cutY after descending
+            if (y > prevY + 0.5f && y > targetY)
+                return -1;
+
+            if (y <= targetY)
+                return i;
+
+            prevY = y;
+        }
+        return -1;
     }
 
-    void EnsureDebugRoot()
+    float InterpolateXAtY(List<Vector3> surface, int idxA, int idxB, float targetY)
     {
-        if (_debugRoot != null) return;
-        var root = new GameObject("ShortcutDebug_Root");
-        root.transform.SetParent(transform, false);
-        _debugRoot = root.transform;
+        if (idxA < 0 || idxB < 0 || idxA >= surface.Count || idxB >= surface.Count)
+            return -1f;
+        Vector3 a = surface[idxA], b = surface[idxB];
+        float dy = b.y - a.y;
+        if (Mathf.Abs(dy) < 0.0001f) return a.x;
+        float t = Mathf.Clamp01((targetY - a.y) / dy);
+        return Mathf.Lerp(a.x, b.x, t);
     }
 
     // -----------------------------------------------------------------------
-    // Helpers
+    // Polygon helpers
     // -----------------------------------------------------------------------
 
-    float SampleSurfaceY(List<Vector3> surface, float x)
+    List<Vector3> BuildClosedPolygon(List<Vector3> surface, float closeY)
     {
-        for (int i = 1; i < surface.Count; i++)
-        {
-            Vector3 a = surface[i - 1], b = surface[i];
-            float dx = b.x - a.x;
-            if (dx <= 0.0001f) continue;
-            if (a.x <= x && x <= b.x)
-                return Mathf.Lerp(a.y, b.y, Mathf.InverseLerp(a.x, b.x, x));
-        }
-        float bestY = surface[0].y, bestD = Mathf.Abs(surface[0].x - x);
-        for (int i = 1; i < surface.Count; i++)
-        {
-            float d = Mathf.Abs(surface[i].x - x);
-            if (d < bestD) { bestD = d; bestY = surface[i].y; }
-        }
-        return bestY;
+        var poly = new List<Vector3>(surface);
+        var last = surface[surface.Count - 1];
+        var first = surface[0];
+        if (Mathf.Abs(last.y - closeY) > 0.0001f)
+            poly.Add(new Vector3(last.x, closeY, 0f));
+        var groundStart = new Vector3(first.x, closeY, 0f);
+        if ((poly[poly.Count - 1] - groundStart).sqrMagnitude > 0.0001f)
+            poly.Add(groundStart);
+        return poly;
+    }
+
+    void CleanPolygon(List<Vector3> pts)
+    {
+        RemoveNearDuplicates(pts, 0.0001f);
+        RemoveCollinear(pts, 0.0001f);
     }
 
     void RemoveNearDuplicates(List<Vector3> pts, float eps)
@@ -444,14 +448,69 @@ public class ShortcutGenerator : MonoBehaviour
         for (int i = pts.Count - 2; i >= 0; i--)
             if ((pts[i + 1] - pts[i]).sqrMagnitude <= eps * eps)
                 pts.RemoveAt(i + 1);
+        if (pts.Count > 2 && (pts[0] - pts[pts.Count - 1]).sqrMagnitude <= eps * eps)
+            pts.RemoveAt(pts.Count - 1);
     }
 
-    static void Shuffle<T>(List<T> list, System.Random rng)
+    void RemoveCollinear(List<Vector3> pts, float eps)
     {
-        for (int i = list.Count - 1; i > 0; i--)
+        if (pts.Count < 3) return;
+        int guard = 0;
+        while (pts.Count >= 3 && guard++ < 5000)
         {
-            int j = rng.Next(0, i + 1);
-            (list[i], list[j]) = (list[j], list[i]);
+            bool removed = false;
+            for (int i = 0; i < pts.Count; i++)
+            {
+                Vector2 a = pts[(i - 1 + pts.Count) % pts.Count];
+                Vector2 b = pts[i];
+                Vector2 c = pts[(i + 1) % pts.Count];
+                float cross = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x);
+                if (Mathf.Abs(cross) <= eps) { pts.RemoveAt(i); removed = true; break; }
+            }
+            if (!removed) break;
         }
+    }
+
+    void AddFillMesh(GameObject go, List<Vector3> polygon, Color color,
+                     int sortingOrder, float tessScale, bool tessInvertWinding)
+    {
+        if (polygon.Count < 3) return;
+
+        var mf = go.AddComponent<MeshFilter>();
+        var mr = go.AddComponent<MeshRenderer>();
+        var mat = new Material(Shader.Find("Sprites/Default")) { color = color };
+        mr.sharedMaterial = mat;
+        mr.sortingOrder = sortingOrder;
+
+        float s = Mathf.Max(1f, tessScale);
+        var tess = new Tess();
+        var contour = new ContourVertex[polygon.Count];
+        for (int i = 0; i < polygon.Count; i++)
+            contour[i].Position = new Vec3(polygon[i].x * s, polygon[i].y * s, 0);
+
+        tess.AddContour(contour,
+            tessInvertWinding ? ContourOrientation.Clockwise : ContourOrientation.CounterClockwise);
+        tess.Tessellate(WindingRule.EvenOdd, ElementType.Polygons, 3);
+
+        if (tess.ElementCount <= 0) return;
+
+        var verts = new Vector3[tess.Vertices.Length];
+        for (int i = 0; i < verts.Length; i++)
+            verts[i] = new Vector3((float)(tess.Vertices[i].Position.X / s),
+                                   (float)(tess.Vertices[i].Position.Y / s), 0f);
+
+        var tris = new List<int>();
+        for (int e = 0; e < tess.ElementCount; e++)
+        {
+            int i0 = tess.Elements[e * 3], i1 = tess.Elements[e * 3 + 1], i2 = tess.Elements[e * 3 + 2];
+            if (i0 >= 0 && i1 >= 0 && i2 >= 0) { tris.Add(i0); tris.Add(i1); tris.Add(i2); }
+        }
+
+        var mesh = new UnityEngine.Mesh { name = "Fill" };
+        mesh.vertices = verts;
+        mesh.triangles = tris.ToArray();
+        mesh.RecalculateBounds();
+        mesh.RecalculateNormals();
+        mf.sharedMesh = mesh;
     }
 }

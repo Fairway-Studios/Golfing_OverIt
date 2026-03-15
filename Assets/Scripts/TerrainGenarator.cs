@@ -191,6 +191,7 @@ public class PerlinMountain2D : MonoBehaviour
                 shortcutGenerator.ApplyShortcuts(surface, baseY, cursorX, mountainWidth, seed + 5000 + 100 * m);
             }
 
+
             var polygon = BuildClosedPolygon(surface, fillCloseY);
             var colliderPoly = BuildClosedPolygon(surface, baseY);
 
@@ -225,6 +226,16 @@ public class PerlinMountain2D : MonoBehaviour
                 for (int i = 0; i < colliderPoly.Count; i++) v2[i] = (Vector2)colliderPoly[i];
                 col.pathCount = 1;
                 col.SetPath(0, v2);
+            }
+
+            if (shortcutGenerator != null)
+            {
+                shortcutGenerator.SpawnTunnelForMountain(
+                    surface, baseY, cursorX, mountainWidth,
+                    seed + 5000 + 100 * m, mountainGO,
+                    fillColor, fillSortingOrder,
+                    outlineWidth, mountainColor,
+                    tessScale, tessInvertWinding);
             }
 
             // Spawn obstacles AFTER collider is created (so overlap checks can work)
