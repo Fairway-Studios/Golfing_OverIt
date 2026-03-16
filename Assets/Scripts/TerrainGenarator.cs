@@ -304,6 +304,24 @@ public class PerlinMountain2D : MonoBehaviour
         if (shortcutGenerator != null)
             shortcutGenerator.ClearGeneratedVisuals();
 
+        var extraTunnelTops = new List<GameObject>();
+        foreach (Transform child in transform)
+        {
+            if (!child) continue;
+
+            if (child.name.StartsWith("TunnelTop_"))
+                extraTunnelTops.Add(child.gameObject);
+        }
+
+        for (int i = 0; i < extraTunnelTops.Count; i++)
+        {
+            var go = extraTunnelTops[i];
+            if (!go) continue;
+
+            if (Application.isPlaying) Destroy(go);
+            else DestroyImmediate(go);
+        }
+
         if (obstaclePlacer != null)
             obstaclePlacer.Clear();
 

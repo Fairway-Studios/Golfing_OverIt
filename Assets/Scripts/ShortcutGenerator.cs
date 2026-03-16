@@ -57,14 +57,37 @@ public class ShortcutGenerator : MonoBehaviour
 
     public void ClearGeneratedVisuals()
     {
+        // First destroy anything we still have tracked
         for (int i = _spawnedPieces.Count - 1; i >= 0; i--)
         {
             var go = _spawnedPieces[i];
             if (!go) continue;
+
             if (Application.isPlaying) Destroy(go);
             else DestroyImmediate(go);
         }
+
         _spawnedPieces.Clear();
+
+        // Fallback: also remove any orphaned tunnel top objects still under this generator
+        var extraToDestroy = new List<GameObject>();
+
+        foreach (Transform child in transform)
+        {
+            if (!child) continue;
+
+            if (child.name.StartsWith("TunnelTop_"))
+                extraToDestroy.Add(child.gameObject);
+        }
+
+        for (int i = 0; i < extraToDestroy.Count; i++)
+        {
+            var go = extraToDestroy[i];
+            if (!go) continue;
+
+            if (Application.isPlaying) Destroy(go);
+            else DestroyImmediate(go);
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -313,14 +336,9 @@ public class ShortcutGenerator : MonoBehaviour
     // Replace bottom mountain mesh/collider
     // -----------------------------------------------------------------------
     void ReplaceMountainWithBottom(GameObject mountainGO, List<Vector3> bottomSurface,
-        float baseY, Color fillColor, int fillSortingOrder,
-        float outlineWidth, Color outlineColor, float tessScale, bool tessInvertWinding)
+    float baseY, Color fillColor, int fillSortingOrder,
+    float outlineWidth, Color outlineColor, float tessScale, bool tessInvertWinding)
     {
-        DestroyComponent<MeshFilter>(mountainGO);
-        DestroyComponent<MeshRenderer>(mountainGO);
-        DestroyComponent<LineRenderer>(mountainGO);
-        DestroyComponent<PolygonCollider2D>(mountainGO);
-
         var fillPoly = BuildClosedPolygon(bottomSurface, baseY - 50f);
         var colPoly = BuildClosedPolygon(bottomSurface, baseY);
         CleanPolygon(fillPoly);
@@ -328,7 +346,9 @@ public class ShortcutGenerator : MonoBehaviour
 
         AddFillMesh(mountainGO, fillPoly, fillColor, fillSortingOrder, tessScale, tessInvertWinding);
 
-        var lr = mountainGO.AddComponent<LineRenderer>();
+        var lr = mountainGO.GetComponent<LineRenderer>();
+        if (lr == null) lr = mountainGO.AddComponent<LineRenderer>();
+
         lr.loop = false;
         lr.positionCount = bottomSurface.Count;
         lr.useWorldSpace = false;
@@ -338,9 +358,13 @@ public class ShortcutGenerator : MonoBehaviour
         lr.endColor = outlineColor;
         lr.SetPositions(bottomSurface.ToArray());
 
-        var col = mountainGO.AddComponent<PolygonCollider2D>();
+        var col = mountainGO.GetComponent<PolygonCollider2D>();
+        if (col == null) col = mountainGO.AddComponent<PolygonCollider2D>();
+
         var v2 = new Vector2[colPoly.Count];
-        for (int i = 0; i < colPoly.Count; i++) v2[i] = colPoly[i];
+        for (int i = 0; i < colPoly.Count; i++)
+            v2[i] = colPoly[i];
+
         col.pathCount = 1;
         col.SetPath(0, v2);
     }
@@ -514,12 +538,23 @@ public class ShortcutGenerator : MonoBehaviour
     }
 
     void AddFillMesh(GameObject go, List<Vector3> polygon, Color color,
-                     int sortingOrder, float tessScale, bool tessInvertWinding)
+                 int sortingOrder, float tessScale, bool tessInvertWinding)
     {
         if (polygon == null || polygon.Count < 3) return;
+        if (go == null) return;
 
-        var mf = go.AddComponent<MeshFilter>();
-        var mr = go.AddComponent<MeshRenderer>();
+        var mf = go.GetComponent<MeshFilter>();
+        if (mf == null) mf = go.AddComponent<MeshFilter>();
+
+        var mr = go.GetComponent<MeshRenderer>();
+        if (mr == null) mr = go.AddComponent<MeshRenderer>();
+
+        if (mr == null || mf == null)
+        {
+            Debug.LogError("[ShortcutGen] Failed to get/add MeshFilter or MeshRenderer.");
+            return;
+        }
+
         mr.sharedMaterial = new Material(Shader.Find("Sprites/Default")) { color = color };
         mr.sortingOrder = sortingOrder;
 
@@ -530,11 +565,15 @@ public class ShortcutGenerator : MonoBehaviour
         for (int i = 0; i < polygon.Count; i++)
             contour[i].Position = new Vec3(polygon[i].x * s, polygon[i].y * s, 0);
 
-        tess.AddContour(contour,
-            tessInvertWinding ? ContourOrientation.Clockwise : ContourOrientation.CounterClockwise);
+        tess.AddContour(
+            contour,
+            tessInvertWinding ? ContourOrientation.Clockwise : ContourOrientation.CounterClockwise
+        );
 
         tess.Tessellate(WindingRule.EvenOdd, ElementType.Polygons, 3);
-        if (tess.ElementCount <= 0) return;
+
+        if (tess.ElementCount <= 0 || tess.Vertices == null || tess.Vertices.Length < 3)
+            return;
 
         var verts = new Vector3[tess.Vertices.Length];
         for (int i = 0; i < verts.Length; i++)
@@ -549,7 +588,7 @@ public class ShortcutGenerator : MonoBehaviour
         var tris = new List<int>();
         for (int e = 0; e < tess.ElementCount; e++)
         {
-            int i0 = tess.Elements[e * 3];
+            int i0 = tess.Elements[e * 3 + 0];
             int i1 = tess.Elements[e * 3 + 1];
             int i2 = tess.Elements[e * 3 + 2];
 
@@ -561,11 +600,24 @@ public class ShortcutGenerator : MonoBehaviour
             }
         }
 
-        var mesh = new UnityEngine.Mesh { name = "Fill" };
+        if (tris.Count < 3)
+            return;
+
+        if (mf.sharedMesh != null)
+        {
+            if (Application.isPlaying)
+                Destroy(mf.sharedMesh);
+            else
+                DestroyImmediate(mf.sharedMesh);
+        }
+
+        var mesh = new UnityEngine.Mesh();
+        mesh.name = "Fill";
         mesh.vertices = verts;
         mesh.triangles = tris.ToArray();
         mesh.RecalculateBounds();
         mesh.RecalculateNormals();
+
         mf.sharedMesh = mesh;
     }
 }
