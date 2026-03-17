@@ -310,6 +310,9 @@ public class InputController : MonoBehaviour
 
         PlayHitSound();
 
+        if (playerIndex == 0)
+            gameManager.RecordStroke();
+
         if (hitParticles != null && currentClub.clubName != "Putter")
         {
             hitParticles.transform.position = ball.transform.position;

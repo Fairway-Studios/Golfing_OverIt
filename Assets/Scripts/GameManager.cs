@@ -10,6 +10,7 @@ public class GameManager : MonoBehaviour
     [Header("UI")]
     [SerializeField] private GameObject selectionUI;
     [SerializeField] private TextMeshProUGUI promptText;
+    [SerializeField] private TextMeshProUGUI hudText;
 
     [Header("Settings")]
     [SerializeField] private bool forceMultiplayerMode = false;
@@ -20,6 +21,10 @@ public class GameManager : MonoBehaviour
     private bool player2VotedA = false;
     private bool player2VotedB = false;
     private bool isMultiplayer = false;
+
+    private int strokeCount = 0;
+    private float elapsedTime = 0f;
+    private bool timerRunning = false;
 
     [Header("Ball Indicators")]
     [SerializeField] private GameObject ballIndicatorPrefab;
@@ -38,10 +43,10 @@ public class GameManager : MonoBehaviour
             selectionUI.SetActive(false);
 
         DetectGameMode();
-
         SetupBallIndicators();
-
         CheckForLoadGame();
+
+        timerRunning = true;
     }
 
     void CheckForLoadGame()
@@ -102,9 +107,6 @@ public class GameManager : MonoBehaviour
     {
         InputController[] controllers = Object.FindObjectsByType<InputController>(FindObjectsSortMode.None);
 
-        // --- NEW: Sort the array alphabetically by the GameObject's name ---
-        // "PlayerOne" comes before "PlayerTwo" alphabetically (O comes before T).
-        // This guarantees Player 1 is ALWAYS index 0.
         System.Array.Sort(controllers, (a, b) => a.transform.root.name.CompareTo(b.transform.root.name));
 
         players = new Transform[controllers.Length];
@@ -131,11 +133,13 @@ public class GameManager : MonoBehaviour
     void DetectGameMode()
     {
         isMultiplayer = (players.Length >= 2) || forceMultiplayerMode;
-        Debug.Log($"Game Mode: {(isMultiplayer ? "Multiplayer" : "Single Player")} - {players.Length} players found");
     }
 
     void Update()
     {
+        if (timerRunning) 
+            elapsedTime += Time.deltaTime;
+
         if (!selectionActive)
         {
             UpdatePrompt();
@@ -145,6 +149,17 @@ public class GameManager : MonoBehaviour
         {
             CheckVotes();
         }
+
+        UpdateHUD();
+    }
+
+    void UpdateHUD()
+    {
+        if (hudText == null) return;
+
+        int minutes = Mathf.FloorToInt(elapsedTime / 60f);
+        int seconds = Mathf.FloorToInt(elapsedTime % 60f);
+        hudText.text = $"Strokes: {strokeCount}  |  {minutes:00}:{seconds:00}";
     }
 
     void SetupBallIndicators()
@@ -392,4 +407,14 @@ public class GameManager : MonoBehaviour
     {
         return isMultiplayer;
     }
+
+    public void RecordStroke()
+    {
+        strokeCount++;
+    }
+
+    public int GetStrokeCount() => strokeCount;
+    public void StartTimer() => timerRunning = true;
+    public void StopTimer() => timerRunning = false;
+    public float GetElapsedTime() => elapsedTime;
 }
