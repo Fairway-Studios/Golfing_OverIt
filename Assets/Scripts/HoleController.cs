@@ -11,10 +11,10 @@ public class HoleController : MonoBehaviour
 
     [Header("Game Over UI")]
     [SerializeField] private GameObject gameOverPanel;
-    [SerializeField] private float gameOverDelay = 3f;
+    [SerializeField] private float gameOverDelay = 1.8f;
 
     [Header("Sink Probability Thresholds")]
-    [SerializeField] private float guaranteedSinkSpeed = 2f;
+    [SerializeField] private float guaranteedSinkSpeed = 1.5f;
     [SerializeField] private float impossibleSinkSpeed = 12f;
 
     [SerializeField] private int impossibleRangeMax = 20;
@@ -49,10 +49,16 @@ public class HoleController : MonoBehaviour
     private bool ShouldSink(float speed)
     {
         if (speed <= guaranteedSinkSpeed)
+        {
+            Debug.Log($"[Hole] Speed: {speed:F2} | Guaranteed sink (below {guaranteedSinkSpeed}) | Sinks: True");
             return true;
+        }
 
         if (speed >= impossibleSinkSpeed)
+        {
+            Debug.Log($"[Hole] Speed: {speed:F2} | Impossible sink (above {impossibleSinkSpeed}) | Sinks: False");
             return false;
+        }
 
         float t = Mathf.InverseLerp(guaranteedSinkSpeed, impossibleSinkSpeed, speed);
         int upperBound = Mathf.Max(1, Mathf.RoundToInt(Mathf.Lerp(1f, impossibleRangeMax, t)));
