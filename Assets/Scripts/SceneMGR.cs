@@ -24,6 +24,8 @@ public class SceneMGR : MonoBehaviour
     [SerializeField] private GameObject pauseButtons;
     [SerializeField] private GameObject pauseSettings;
 
+    [SerializeField] private GameManager gameManager;
+
     private GameObject[] balls;
     private Dictionary<KeyCode, Action> keyActions;
     private bool isGamePaused = false;
@@ -175,6 +177,7 @@ public class SceneMGR : MonoBehaviour
     public void PauseGame()
     {
         isGamePaused = true;
+        gameManager.StopTimer();
         // Assuming you removed Time.timeScale per previous request, relying on input disable
         // If physics pause is needed, add Time.timeScale = 0f here.
         if (pauseMenuRoot != null) pauseMenuRoot.SetActive(true);
@@ -184,6 +187,7 @@ public class SceneMGR : MonoBehaviour
     public void ResumeGame()
     {
         isGamePaused = false;
+        gameManager.StartTimer();
         if (pauseMenuRoot != null) pauseMenuRoot.SetActive(false);
     }
 
