@@ -59,6 +59,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "InvertCamX",
+                    "type": "Button",
+                    "id": "c3d02408-78a5-4ab0-95a4-6bc4c43170ef",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -169,6 +178,28 @@
                     "processors": "",
                     "groups": ";Controller",
                     "action": "CycleCamTarget",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "314f4e53-d611-4289-8735-cc33f675dae8",
+                    "path": "<Keyboard>/v",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "InvertCamX",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "5bf66994-1ffc-445b-a04f-796b4cc2d1fa",
+                    "path": "<Gamepad>/dpad/up",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "InvertCamX",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

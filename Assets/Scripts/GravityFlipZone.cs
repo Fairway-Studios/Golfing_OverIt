@@ -12,6 +12,8 @@ public class GravityFlipZone : MonoBehaviour
     private GameManager gameManager;
     private static bool s_gravityFlipped = false;
 
+    [SerializeField] private CameraController cameraController;
+
     void Start()
     {
         ballController = Object.FindFirstObjectByType<GolfBallController>();
@@ -45,6 +47,8 @@ public class GravityFlipZone : MonoBehaviour
             rb.gravityScale = -1f;
             if (gameManager != null)
                 gameManager.SetPlayerOffsetFromBall(flippedOffset);
+
+            cameraController.InvertCamCompositionY();
         }
         else
         {
@@ -55,6 +59,8 @@ public class GravityFlipZone : MonoBehaviour
             rb.AddForce(Vector2.down * 3f, ForceMode2D.Impulse);
             if (gameManager != null)
                 gameManager.SetPlayerOffsetFromBall(originalOffset);
+
+            cameraController.InvertCamCompositionY();
         }
     }
 

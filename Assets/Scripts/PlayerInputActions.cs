@@ -145,6 +145,15 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""InvertCamX"",
+                    ""type"": ""Button"",
+                    ""id"": ""c3d02408-78a5-4ab0-95a4-6bc4c43170ef"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -257,6 +266,28 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
                     ""action"": ""CycleCamTarget"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""314f4e53-d611-4289-8735-cc33f675dae8"",
+                    ""path"": ""<Keyboard>/v"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""InvertCamX"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""5bf66994-1ffc-445b-a04f-796b4cc2d1fa"",
+                    ""path"": ""<Gamepad>/dpad/up"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""InvertCamX"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -299,6 +330,7 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         m_Gameplay_SelectBallB = m_Gameplay.FindAction("SelectBallB", throwIfNotFound: true);
         m_Gameplay_MoveCamera = m_Gameplay.FindAction("MoveCamera", throwIfNotFound: true);
         m_Gameplay_CycleCamTarget = m_Gameplay.FindAction("CycleCamTarget", throwIfNotFound: true);
+        m_Gameplay_InvertCamX = m_Gameplay.FindAction("InvertCamX", throwIfNotFound: true);
     }
 
     ~@PlayerInputActions()
@@ -385,6 +417,7 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
     private readonly InputAction m_Gameplay_SelectBallB;
     private readonly InputAction m_Gameplay_MoveCamera;
     private readonly InputAction m_Gameplay_CycleCamTarget;
+    private readonly InputAction m_Gameplay_InvertCamX;
     /// <summary>
     /// Provides access to input actions defined in input action map "Gameplay".
     /// </summary>
@@ -420,6 +453,10 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Gameplay/CycleCamTarget".
         /// </summary>
         public InputAction @CycleCamTarget => m_Wrapper.m_Gameplay_CycleCamTarget;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/InvertCamX".
+        /// </summary>
+        public InputAction @InvertCamX => m_Wrapper.m_Gameplay_InvertCamX;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -464,6 +501,9 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
             @CycleCamTarget.started += instance.OnCycleCamTarget;
             @CycleCamTarget.performed += instance.OnCycleCamTarget;
             @CycleCamTarget.canceled += instance.OnCycleCamTarget;
+            @InvertCamX.started += instance.OnInvertCamX;
+            @InvertCamX.performed += instance.OnInvertCamX;
+            @InvertCamX.canceled += instance.OnInvertCamX;
         }
 
         /// <summary>
@@ -493,6 +533,9 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
             @CycleCamTarget.started -= instance.OnCycleCamTarget;
             @CycleCamTarget.performed -= instance.OnCycleCamTarget;
             @CycleCamTarget.canceled -= instance.OnCycleCamTarget;
+            @InvertCamX.started -= instance.OnInvertCamX;
+            @InvertCamX.performed -= instance.OnInvertCamX;
+            @InvertCamX.canceled -= instance.OnInvertCamX;
         }
 
         /// <summary>
@@ -601,5 +644,12 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnCycleCamTarget(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "InvertCamX" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnInvertCamX(InputAction.CallbackContext context);
     }
 }

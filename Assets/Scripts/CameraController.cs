@@ -1,5 +1,6 @@
 using UnityEngine;
 using Unity.Cinemachine;
+using Unity.VisualScripting;
 
 public class CameraController : MonoBehaviour
 {
@@ -74,11 +75,16 @@ public class CameraController : MonoBehaviour
     private float previousBallVelocityY;
     private bool isBallDescending = false;
 
+    private CinemachinePositionComposer positionComposer;
+
     void Start()
     {
         // Create dynamic follow target
         GameObject t = new GameObject("CameraTarget");
         followTarget = t.transform;
+
+        positionComposer = virtualCamera.GetComponentInChildren<CinemachinePositionComposer>();
+
 
         if (virtualCamera != null)
         {
@@ -396,5 +402,15 @@ public class CameraController : MonoBehaviour
     public bool IsWaitingForSwings()
     {
         return isWaitingForSwings;
+    }
+
+    public void InvertCamCompositionY()
+    {
+        positionComposer.Composition.ScreenPosition.y = -positionComposer.Composition.ScreenPosition.y;
+    }
+
+    public void InvertCamCompositionX()
+    {
+        positionComposer.Composition.ScreenPosition.x = -positionComposer.Composition.ScreenPosition.x;
     }
 }

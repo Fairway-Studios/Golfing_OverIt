@@ -175,6 +175,14 @@ public class InputController : MonoBehaviour
             cameraController.CycleTargetBall();
     }
 
+    public void OnInvertCamX(InputAction.CallbackContext context)
+    {
+        Debug.Log("Invert Cam X triggered");
+
+        if (cameraController != null && context.performed)
+            cameraController.InvertCamCompositionX();
+    }
+
     public void OnMoveCamera(InputAction.CallbackContext context)
     {
         if (cameraController != null)
