@@ -381,4 +381,14 @@ public class InputController : MonoBehaviour
     }
 
     public int GetPlayerIndex() => playerIndex;
+
+
+
+    //gravity flip methods
+    public void SetLockedPosition(Vector2 newPosition)
+    {
+        lockedPosition = newPosition;
+        rb.position = newPosition;
+        previousPosition = newPosition;
+    }
 }

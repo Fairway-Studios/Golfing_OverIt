@@ -417,4 +417,11 @@ public class GameManager : MonoBehaviour
     public void StartTimer() => timerRunning = true;
     public void StopTimer() => timerRunning = false;
     public float GetElapsedTime() => elapsedTime;
+
+    public Vector3 GetPlayerOffsetFromBall() => playerOffsetFromBall;
+
+    public void SetPlayerOffsetFromBall(Vector3 newOffset)
+    {
+        playerOffsetFromBall = newOffset;
+    }
 }
