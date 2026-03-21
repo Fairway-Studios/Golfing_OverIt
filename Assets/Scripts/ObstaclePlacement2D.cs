@@ -76,6 +76,7 @@ public class ObstaclePlacement2D : MonoBehaviour
 
     readonly List<GameObject> _spawned = new();
     readonly List<ObstacleBallCollision2D> _spawnedCollisionControllers = new();
+    readonly Dictionary<GameObject, ObstacleBallCollision2D.ObstacleColor> _spawnedObstacleColors = new();
 
     private GolfBallController blueBall;
     private GolfBallController redBall;
@@ -84,6 +85,14 @@ public class ObstaclePlacement2D : MonoBehaviour
     /// Call this from your terrain generator once you have the mountain surface.
     /// Surface points are in generator-local space.
     /// </summary>
+    /// 
+
+
+    void Update()
+    {
+        RefreshSpawnedObstacleAnaglyphs();
+    }
+
     public void SpawnOnMountain(
         List<Vector3> surfaceLocal,
         float mountainStartX,
@@ -119,8 +128,6 @@ public class ObstaclePlacement2D : MonoBehaviour
 
         for (int i = 0; i < obstaclesPerMountain; i++)
         {
-            
-
             for (int attempt = 0; attempt < maxAttemptsPerObstacle; attempt++)
             {
                 float x = Lerp(minX, maxX, (float)rng.NextDouble());
@@ -159,8 +166,6 @@ public class ObstaclePlacement2D : MonoBehaviour
                 }
 
                 _spawned.Add(obj);
-
-                
                 break;
             }
         }
@@ -189,38 +194,88 @@ public class ObstaclePlacement2D : MonoBehaviour
     {
         if (obj == null) return ObstacleBallCollision2D.ObstacleColor.Blue;
 
-        AnaglyphRenderingController controller = obj.GetComponentInChildren<AnaglyphRenderingController>(true);
         bool chooseBlue = rng.Next(0, 2) == 0;
-
-        if (controller != null)
-        {
-            AnaglyphColorSettings chosenSettings = chooseBlue ? blueAnaglyphSettings : redAnaglyphSettings;
-
-            if (chosenSettings != null)
-            {
-                FieldInfo colorSettingsField = typeof(AnaglyphRenderingController).GetField(
-                    "colorSettings",
-                    BindingFlags.Instance | BindingFlags.NonPublic
-                );
-
-                if (colorSettingsField != null)
-                    colorSettingsField.SetValue(controller, chosenSettings);
-
-                MethodInfo cacheRenderersMethod = typeof(AnaglyphRenderingController).GetMethod(
-                    "CacheRenderers",
-                    BindingFlags.Instance | BindingFlags.NonPublic
-                );
-
-                if (cacheRenderersMethod != null)
-                    cacheRenderersMethod.Invoke(controller, null);
-
-                controller.ApplyHSVAdjustment();
-            }
-        }
-
-        return chooseBlue
+        ObstacleBallCollision2D.ObstacleColor color = chooseBlue
             ? ObstacleBallCollision2D.ObstacleColor.Blue
             : ObstacleBallCollision2D.ObstacleColor.Red;
+
+        ApplyAnaglyphSettingsToObject(obj, color, true);
+        _spawnedObstacleColors[obj] = color;
+
+        return color;
+    }
+
+    void ApplyAnaglyphSettingsToObject(GameObject obj, ObstacleBallCollision2D.ObstacleColor color, bool recacheOriginals)
+    {
+        if (obj == null) return;
+
+        AnaglyphRenderingController controller = obj.GetComponentInChildren<AnaglyphRenderingController>(true);
+        if (controller == null) return;
+
+        AnaglyphColorSettings chosenSettings =
+            color == ObstacleBallCollision2D.ObstacleColor.Blue
+            ? blueAnaglyphSettings
+            : redAnaglyphSettings;
+
+        if (chosenSettings == null) return;
+
+        FieldInfo colorSettingsField = typeof(AnaglyphRenderingController).GetField(
+            "colorSettings",
+            BindingFlags.Instance | BindingFlags.NonPublic
+        );
+
+        if (colorSettingsField == null) return;
+
+        // Unsubscribe from whatever settings object it had before
+        MethodInfo onDisableMethod = typeof(AnaglyphRenderingController).GetMethod(
+            "OnDisable",
+            BindingFlags.Instance | BindingFlags.NonPublic
+        );
+
+        if (onDisableMethod != null)
+            onDisableMethod.Invoke(controller, null);
+
+        // Assign the correct runtime settings object
+        colorSettingsField.SetValue(controller, chosenSettings);
+
+        // Only recache once when the obstacle is first created
+        if (recacheOriginals)
+        {
+            MethodInfo cacheRenderersMethod = typeof(AnaglyphRenderingController).GetMethod(
+                "CacheRenderers",
+                BindingFlags.Instance | BindingFlags.NonPublic
+            );
+
+            if (cacheRenderersMethod != null)
+                cacheRenderersMethod.Invoke(controller, null);
+        }
+
+        // Subscribe again, now to the NEW settings object
+        MethodInfo onEnableMethod = typeof(AnaglyphRenderingController).GetMethod(
+            "OnEnable",
+            BindingFlags.Instance | BindingFlags.NonPublic
+        );
+
+        if (onEnableMethod != null)
+            onEnableMethod.Invoke(controller, null);
+
+        controller.ApplyHSVAdjustment();
+    }
+
+    public void RefreshSpawnedObstacleAnaglyphs()
+    {
+        for (int i = 0; i < _spawned.Count; i++)
+        {
+            GameObject obj = _spawned[i];
+            if (obj == null) continue;
+
+            if (_spawnedObstacleColors.TryGetValue(obj, out var color))
+            {
+                // IMPORTANT:
+                // Do NOT recache originals here, or colors will drift / stack.
+                ApplyAnaglyphSettingsToObject(obj, color, false);
+            }
+        }
     }
 
     void ApplyObstacleLayer(GameObject obj, ObstacleBallCollision2D.ObstacleColor color)
@@ -325,6 +380,7 @@ public class ObstaclePlacement2D : MonoBehaviour
 
         _spawned.Clear();
         _spawnedCollisionControllers.Clear();
+        _spawnedObstacleColors.Clear();
 
         if (obstaclesRoot != null)
         {
