@@ -8,6 +8,7 @@ using UnityEngine;
 /// - Uses a local System.Random so it does NOT mess with UnityEngine.Random state.
 /// - Spawns on the surface Y at random X positions, with spacing / edge padding / spawn avoidance.
 /// - Randomly assigns red or blue anaglyph settings to spawned obstacles.
+/// - Makes opposite player's ball pass through.
 /// </summary>
 public class ObstaclePlacement2D : MonoBehaviour
 {
@@ -48,7 +49,7 @@ public class ObstaclePlacement2D : MonoBehaviour
     [Tooltip("Radius used for overlap checking (world units).")]
     public float overlapCheckRadius = 0.25f;
 
-    public LayerMask overlapMask = ~0; // everything by default
+    public LayerMask overlapMask = ~0;
 
     [Header("Parenting")]
     [Tooltip("Obstacles will be parented here (auto-created if null).")]
@@ -61,7 +62,23 @@ public class ObstaclePlacement2D : MonoBehaviour
     [Tooltip("Assign: Red Blue Anaglyph Settings (Anaglyph Color Settings)")]
     public AnaglyphColorSettings redAnaglyphSettings;
 
+    [Header("Optional Layers")]
+    [Tooltip("Obstacle layer name for blue obstacles.")]
+    public string blueObstacleLayerName = "BlueLayer";
+
+    [Tooltip("Obstacle layer name for red obstacles.")]
+    public string redObstacleLayerName = "RedLayer";
+
     readonly List<GameObject> _spawned = new();
+    readonly List<ObstacleBallCollision2D> _spawnedCollisionControllers = new();
+
+    [Header("Teleport Safety")]
+    [SerializeField] private float sharedSafeStepDistance = 0.2f;
+    [SerializeField] private int sharedSafeMaxSteps = 24;
+    [SerializeField] private float sharedSafeClearance = 0.08f;
+
+    private GolfBallController blueBall;
+    private GolfBallController redBall;
 
     /// <summary>
     /// Call this from your terrain generator once you have the mountain surface.
@@ -85,6 +102,13 @@ public class ObstaclePlacement2D : MonoBehaviour
         if (generatorTransform == null) return;
 
         EnsureRoot(generatorTransform);
+        FindBallsByOwnerIndex();
+
+        if (blueBall == null || redBall == null)
+        {
+            Debug.LogWarning("[ObstaclePlacement2D] Could not find both golf balls by owner index.");
+            return;
+        }
 
         float minX = mountainStartX + edgePaddingX;
         float maxX = mountainStartX + mountainWidth - edgePaddingX;
@@ -108,19 +132,15 @@ public class ObstaclePlacement2D : MonoBehaviour
                 float yLocal = SampleSurfaceY_Local(surfaceLocal, x);
                 float angleDeg = alignToSlope ? SampleSurfaceAngleDeg_Local(surfaceLocal, x) : 0f;
 
-                // local -> world
                 Vector3 worldPos = generatorTransform.TransformPoint(new Vector3(x, yLocal + yOffset, 0f));
 
-                // avoid spawn points
                 if (Vector2.Distance(worldPos, p1) < avoidSpawnPointsRadius) continue;
                 if (Vector2.Distance(worldPos, p2) < avoidSpawnPointsRadius) continue;
                 if (Vector2.Distance(worldPos, b1) < avoidSpawnPointsRadius) continue;
                 if (Vector2.Distance(worldPos, b2) < avoidSpawnPointsRadius) continue;
 
-                // spacing vs other obstacles
                 if (IsTooClose(worldPos, minSpacing)) continue;
 
-                // overlap check (optional)
                 if (useOverlapCheck)
                 {
                     if (Physics2D.OverlapCircle(worldPos, overlapCheckRadius, overlapMask) != null)
@@ -135,49 +155,155 @@ public class ObstaclePlacement2D : MonoBehaviour
 
                 GameObject obj = Instantiate(prefab, worldPos, rot, obstaclesRoot);
 
-                AssignRandomAnaglyphSettings(obj, rng);
+                ObstacleBallCollision2D.ObstacleColor color = AssignRandomAnaglyphSettings(obj, rng);
+                ApplyObstacleLayer(obj, color);
+                SetupObstacleCollision(obj, color);
 
                 _spawned.Add(obj);
 
                 placed = true;
                 break;
             }
-
-            if (!placed) { }
         }
     }
 
-    void AssignRandomAnaglyphSettings(GameObject obj, System.Random rng)
+    void FindBallsByOwnerIndex()
     {
-        if (obj == null) return;
+        blueBall = null;
+        redBall = null;
+
+        GolfBallController[] balls = FindObjectsByType<GolfBallController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+        for (int i = 0; i < balls.Length; i++)
+        {
+            GolfBallController ball = balls[i];
+            if (ball == null) continue;
+
+            if (ball.GetOwnerIndex() == 0)
+                blueBall = ball;
+            else if (ball.GetOwnerIndex() == 1)
+                redBall = ball;
+        }
+    }
+
+    ObstacleBallCollision2D.ObstacleColor AssignRandomAnaglyphSettings(GameObject obj, System.Random rng)
+    {
+        if (obj == null) return ObstacleBallCollision2D.ObstacleColor.Blue;
 
         AnaglyphRenderingController controller = obj.GetComponentInChildren<AnaglyphRenderingController>(true);
-        if (controller == null) return;
+        bool chooseBlue = rng.Next(0, 2) == 0;
 
-        AnaglyphColorSettings chosenSettings = rng.Next(0, 2) == 0
-            ? blueAnaglyphSettings
-            : redAnaglyphSettings;
+        if (controller != null)
+        {
+            AnaglyphColorSettings chosenSettings = chooseBlue ? blueAnaglyphSettings : redAnaglyphSettings;
 
-        if (chosenSettings == null) return;
+            if (chosenSettings != null)
+            {
+                FieldInfo colorSettingsField = typeof(AnaglyphRenderingController).GetField(
+                    "colorSettings",
+                    BindingFlags.Instance | BindingFlags.NonPublic
+                );
 
-        FieldInfo colorSettingsField = typeof(AnaglyphRenderingController).GetField(
-            "colorSettings",
-            BindingFlags.Instance | BindingFlags.NonPublic
-        );
+                if (colorSettingsField != null)
+                    colorSettingsField.SetValue(controller, chosenSettings);
 
-        if (colorSettingsField == null) return;
+                MethodInfo cacheRenderersMethod = typeof(AnaglyphRenderingController).GetMethod(
+                    "CacheRenderers",
+                    BindingFlags.Instance | BindingFlags.NonPublic
+                );
 
-        colorSettingsField.SetValue(controller, chosenSettings);
+                if (cacheRenderersMethod != null)
+                    cacheRenderersMethod.Invoke(controller, null);
 
-        MethodInfo cacheRenderersMethod = typeof(AnaglyphRenderingController).GetMethod(
-            "CacheRenderers",
-            BindingFlags.Instance | BindingFlags.NonPublic
-        );
+                controller.ApplyHSVAdjustment();
+            }
+        }
 
-        if (cacheRenderersMethod != null)
-            cacheRenderersMethod.Invoke(controller, null);
+        return chooseBlue
+            ? ObstacleBallCollision2D.ObstacleColor.Blue
+            : ObstacleBallCollision2D.ObstacleColor.Red;
+    }
 
-        controller.ApplyHSVAdjustment();
+    void ApplyObstacleLayer(GameObject obj, ObstacleBallCollision2D.ObstacleColor color)
+    {
+        string layerName = color == ObstacleBallCollision2D.ObstacleColor.Blue
+            ? blueObstacleLayerName
+            : redObstacleLayerName;
+
+        int layer = LayerMask.NameToLayer(layerName);
+        if (layer == -1) return;
+
+        SetLayerRecursively(obj, layer);
+    }
+
+    void SetLayerRecursively(GameObject obj, int layer)
+    {
+        obj.layer = layer;
+
+        for (int i = 0; i < obj.transform.childCount; i++)
+            SetLayerRecursively(obj.transform.GetChild(i).gameObject, layer);
+    }
+
+    void SetupObstacleCollision(GameObject obj, ObstacleBallCollision2D.ObstacleColor color)
+    {
+        if (obj == null || blueBall == null || redBall == null) return;
+
+        ObstacleBallCollision2D controller = obj.GetComponent<ObstacleBallCollision2D>();
+        if (controller == null)
+            controller = obj.AddComponent<ObstacleBallCollision2D>();
+
+        controller.Setup(color, blueBall, redBall);
+        _spawnedCollisionControllers.Add(controller);
+    }
+
+    /// <summary>
+    /// Call this after best-ball teleport / reposition.
+    /// </summary>
+    public Vector3 ResolveSharedSafeBallPosition(Vector3 desiredPos)
+    {
+        if (_spawnedCollisionControllers.Count == 0)
+            return desiredPos;
+
+        if (IsSharedBallPositionSafe(desiredPos))
+            return desiredPos;
+
+        // 1) Try left/right first so we do not place the ball on top of the obstacle edge
+        for (int i = 1; i <= sharedSafeMaxSteps; i++)
+        {
+            float dist = sharedSafeStepDistance * i;
+
+            Vector3 left = desiredPos + Vector3.left * dist;
+            if (IsSharedBallPositionSafe(left))
+                return left;
+
+            Vector3 right = desiredPos + Vector3.right * dist;
+            if (IsSharedBallPositionSafe(right))
+                return right;
+        }
+
+        // 2) Then try upward
+        for (int i = 1; i <= sharedSafeMaxSteps; i++)
+        {
+            Vector3 up = desiredPos + Vector3.up * (sharedSafeStepDistance * i);
+            if (IsSharedBallPositionSafe(up))
+                return up;
+        }
+
+        return desiredPos;
+    }
+
+    bool IsSharedBallPositionSafe(Vector3 testPos)
+    {
+        for (int i = 0; i < _spawnedCollisionControllers.Count; i++)
+        {
+            ObstacleBallCollision2D controller = _spawnedCollisionControllers[i];
+            if (controller == null) continue;
+
+            if (controller.IsPositionBlockedForBlockingBall(testPos, sharedSafeClearance))
+                return false;
+        }
+
+        return true;
     }
 
     public void Clear()
@@ -190,7 +316,9 @@ public class ObstaclePlacement2D : MonoBehaviour
             if (Application.isPlaying) Destroy(go);
             else DestroyImmediate(go);
         }
+
         _spawned.Clear();
+        _spawnedCollisionControllers.Clear();
 
         if (obstaclesRoot != null)
         {

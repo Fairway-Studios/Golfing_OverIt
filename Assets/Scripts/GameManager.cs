@@ -6,6 +6,7 @@ public class GameManager : MonoBehaviour
     [Header("References")]
     [SerializeField] private CameraController cameraController;
     [SerializeField] private Vector3 playerOffsetFromBall = new Vector3(-0.1f, 1.45f, 0f);
+    [SerializeField] private ObstaclePlacement2D obstaclePlacement;
 
     [Header("UI")]
     [SerializeField] private GameObject selectionUI;
@@ -38,6 +39,9 @@ public class GameManager : MonoBehaviour
     {
         FindPlayers();
         FindCamera();
+
+        if (obstaclePlacement == null)
+            obstaclePlacement = Object.FindFirstObjectByType<ObstaclePlacement2D>();
 
         if (selectionUI != null)
             selectionUI.SetActive(false);
@@ -353,23 +357,62 @@ public class GameManager : MonoBehaviour
         foreach (var c in controllers)
             c.OnPlayerTeleported();
 
+        // First move players to chosen position
         for (int i = 0; i < players.Length; i++)
         {
             if (players[i] != null)
                 players[i].position = pos + playerOffsetFromBall;
         }
 
+        // Move both balls to chosen position
+        // Move both balls to chosen position
         foreach (var ball in allBalls)
         {
             ball.DisableTrail();
+
+            Rigidbody2D rb = ball.GetRigidbody();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector2.zero;
+                rb.angularVelocity = 0f;
+                rb.position = pos;
+            }
+
             ball.transform.position = pos;
-            ball.GetRigidbody().position = pos;
-            ball.GetRigidbody().linearVelocity = Vector2.zero;
-            ball.GetRigidbody().angularVelocity = 0f;
         }
 
+        Vector3 finalPos = pos;
+
+        if (obstaclePlacement != null)
+        {
+            finalPos = obstaclePlacement.ResolveSharedSafeBallPosition(pos);
+        }
+
+        // Move both balls to the SAME final safe position
+        foreach (var ball in allBalls)
+        {
+            Rigidbody2D rb = ball.GetRigidbody();
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector2.zero;
+                rb.angularVelocity = 0f;
+                rb.position = finalPos;
+                rb.Sleep();
+            }
+
+            ball.transform.position = finalPos;
+        }
+
+        // Re-align players to final position
+        for (int i = 0; i < players.Length; i++)
+        {
+            if (players[i] != null)
+                players[i].position = finalPos + playerOffsetFromBall;
+        }
+
+        // Re-align camera to final position
         if (cameraTransform != null)
-            cameraTransform.position = new Vector3(pos.x, pos.y, cameraTransform.position.z);
+            cameraTransform.position = new Vector3(finalPos.x, finalPos.y, cameraTransform.position.z);
 
         foreach (var ball in allBalls)
         {
