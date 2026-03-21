@@ -7,8 +7,8 @@ using UnityEngine;
 /// Spawns obstacle prefabs along a generated 2D terrain surface.
 /// - Uses a local System.Random so it does NOT mess with UnityEngine.Random state.
 /// - Spawns on the surface Y at random X positions, with spacing / edge padding / spawn avoidance.
-/// - Randomly assigns red or blue anaglyph settings to spawned obstacles.
-/// - Makes opposite player's ball pass through.
+/// - In multiplayer: assigns red/blue anaglyph settings and opposite-ball pass-through rules.
+/// - In singleplayer: spawns obstacles normally with default collision behavior.
 /// </summary>
 public class ObstaclePlacement2D : MonoBehaviour
 {
@@ -55,34 +55,34 @@ public class ObstaclePlacement2D : MonoBehaviour
     [Tooltip("Obstacles will be parented here (auto-created if null).")]
     public Transform obstaclesRoot;
 
-    [Header("Anaglyph Settings")]
+    [Header("Anaglyph Settings (Multiplayer Only)")]
     [Tooltip("Assign: Blue Anaglyph Settings (Anaglyph Color Settings)")]
     public AnaglyphColorSettings blueAnaglyphSettings;
 
-    [Tooltip("Assign: Red Blue Anaglyph Settings (Anaglyph Color Settings)")]
+    [Tooltip("Assign: Red Anaglyph Settings (Anaglyph Color Settings)")]
     public AnaglyphColorSettings redAnaglyphSettings;
 
-    [Header("Optional Layers")]
+    [Header("Optional Layers (Multiplayer Only)")]
     [Tooltip("Obstacle layer name for blue obstacles.")]
     public string blueObstacleLayerName = "BlueLayer";
 
     [Tooltip("Obstacle layer name for red obstacles.")]
     public string redObstacleLayerName = "RedLayer";
 
-    readonly List<GameObject> _spawned = new();
-    readonly List<ObstacleBallCollision2D> _spawnedCollisionControllers = new();
-
-    [Header("Teleport Safety")]
+    [Header("Teleport Safety (Multiplayer Only)")]
     [SerializeField] private float sharedSafeStepDistance = 0.2f;
     [SerializeField] private int sharedSafeMaxSteps = 24;
     [SerializeField] private float sharedSafeClearance = 0.08f;
+
+    readonly List<GameObject> _spawned = new();
+    readonly List<ObstacleBallCollision2D> _spawnedCollisionControllers = new();
 
     private GolfBallController blueBall;
     private GolfBallController redBall;
 
     /// <summary>
     /// Call this from your terrain generator once you have the mountain surface.
-    /// surface points are in generator-local space.
+    /// Surface points are in generator-local space.
     /// </summary>
     public void SpawnOnMountain(
         List<Vector3> surfaceLocal,
@@ -104,11 +104,7 @@ public class ObstaclePlacement2D : MonoBehaviour
         EnsureRoot(generatorTransform);
         FindBallsByOwnerIndex();
 
-        if (blueBall == null || redBall == null)
-        {
-            Debug.LogWarning("[ObstaclePlacement2D] Could not find both golf balls by owner index.");
-            return;
-        }
+        bool isMultiplayerObstacleMode = blueBall != null && redBall != null;
 
         float minX = mountainStartX + edgePaddingX;
         float maxX = mountainStartX + mountainWidth - edgePaddingX;
@@ -123,7 +119,7 @@ public class ObstaclePlacement2D : MonoBehaviour
 
         for (int i = 0; i < obstaclesPerMountain; i++)
         {
-            bool placed = false;
+            
 
             for (int attempt = 0; attempt < maxAttemptsPerObstacle; attempt++)
             {
@@ -155,13 +151,16 @@ public class ObstaclePlacement2D : MonoBehaviour
 
                 GameObject obj = Instantiate(prefab, worldPos, rot, obstaclesRoot);
 
-                ObstacleBallCollision2D.ObstacleColor color = AssignRandomAnaglyphSettings(obj, rng);
-                ApplyObstacleLayer(obj, color);
-                SetupObstacleCollision(obj, color);
+                if (isMultiplayerObstacleMode)
+                {
+                    ObstacleBallCollision2D.ObstacleColor color = AssignRandomAnaglyphSettings(obj, rng);
+                    ApplyObstacleLayer(obj, color);
+                    SetupObstacleCollision(obj, color);
+                }
 
                 _spawned.Add(obj);
 
-                placed = true;
+                
                 break;
             }
         }
@@ -257,17 +256,21 @@ public class ObstaclePlacement2D : MonoBehaviour
     }
 
     /// <summary>
-    /// Call this after best-ball teleport / reposition.
+    /// Multiplayer best-ball teleport safety.
+    /// In singleplayer, this simply returns the original position.
     /// </summary>
     public Vector3 ResolveSharedSafeBallPosition(Vector3 desiredPos)
     {
+        if (blueBall == null || redBall == null)
+            return desiredPos;
+
         if (_spawnedCollisionControllers.Count == 0)
             return desiredPos;
 
         if (IsSharedBallPositionSafe(desiredPos))
             return desiredPos;
 
-        // 1) Try left/right first so we do not place the ball on top of the obstacle edge
+        // Try left/right first
         for (int i = 1; i <= sharedSafeMaxSteps; i++)
         {
             float dist = sharedSafeStepDistance * i;
@@ -281,7 +284,7 @@ public class ObstaclePlacement2D : MonoBehaviour
                 return right;
         }
 
-        // 2) Then try upward
+        // Then upward
         for (int i = 1; i <= sharedSafeMaxSteps; i++)
         {
             Vector3 up = desiredPos + Vector3.up * (sharedSafeStepDistance * i);
@@ -294,6 +297,9 @@ public class ObstaclePlacement2D : MonoBehaviour
 
     bool IsSharedBallPositionSafe(Vector3 testPos)
     {
+        if (blueBall == null || redBall == null)
+            return true;
+
         for (int i = 0; i < _spawnedCollisionControllers.Count; i++)
         {
             ObstacleBallCollision2D controller = _spawnedCollisionControllers[i];
