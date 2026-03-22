@@ -189,11 +189,43 @@ public class ShortcutGenerator : MonoBehaviour
         Transform wallsRoot = GetOrCreateBreakableWallsRoot();
         Transform obstaclesRoot = FindObstaclesRoot();
 
-        // bounds is always world-space — no TransformPoint needed
+        // bounds is always world-space — no TransformPoint needed.
+        // bounds.min.x is the far-left of the entire TunnelTop piece, which
+        // extends left beyond the actual tunnel opening (it includes the rock
+        // above the gap). We want the X of the tunnel entrance specifically.
+        //
+        // The tunnel entrance is the bottom-left corner of the top piece —
+        // i.e. the leftmost point that is also near the bottom of the bounds.
+        // We find this by scanning path points in world space and picking the
+        // one with the smallest X among those within gapSize of bounds.min.y.
         Bounds b = topCol.bounds;
 
-        float wallX = b.min.x + wallEntranceOffsetX;
-        float wallY = b.min.y + gapSize * 0.5f + wallVerticalOffset;
+        Vector2[] path = topCol.GetPath(0);
+        float entranceWorldX = b.max.x; // start with max, find true left entrance
+        float yThreshold = b.min.y + gapSize * 1.5f; // bottom portion of bounds
+
+        foreach (var pt in path)
+        {
+            Vector3 wp = topGO.transform.TransformPoint(new Vector3(pt.x, pt.y, 0f));
+            if (wp.y <= yThreshold && wp.x < entranceWorldX)
+                entranceWorldX = wp.x;
+        }
+
+        // Among the same bottom-region points, also find the Y at the entrance.
+        // The entrance bottom Y = lowest world Y among those points.
+        // Gap centre = entranceBottomY + gapSize * 0.5f (gapSize is in surface units,
+        // but topGO has localScale=1 so world units match surface units exactly).
+        float entranceBottomY = float.MaxValue;
+        foreach (var pt in path)
+        {
+            Vector3 wp = topGO.transform.TransformPoint(new Vector3(pt.x, pt.y, 0f));
+            if (wp.y <= yThreshold && wp.x < (entranceWorldX + 2f))
+                if (wp.y < entranceBottomY) entranceBottomY = wp.y;
+        }
+        if (entranceBottomY == float.MaxValue) entranceBottomY = b.min.y;
+
+        float wallX = entranceWorldX + wallEntranceOffsetX;
+        float wallY = entranceBottomY + gapSize * 0.5f + wallVerticalOffset;
 
         GameObject wall = Instantiate(breakableWallPrefab);
         wall.name = $"BreakableWall_{_breakableWallCounter++}";
