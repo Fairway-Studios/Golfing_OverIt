@@ -48,42 +48,46 @@ public class AchievementPopupUI : MonoBehaviour
 
     private IEnumerator DisplayNextAchievement()
     {
+        // 1. Lock the gate so we don't trigger multiple slides at once
         isDisplaying = true;
 
         while (unlockQueue.Count > 0)
         {
             AchievementData nextData = unlockQueue.Dequeue();
 
-            // Set UI Data
+            // 2. Set UI Data
             titleText.text = nextData.title;
             descriptionText.text = nextData.description;
             if (nextData.icon != null) iconImage.sprite = nextData.icon;
 
-            // Play Sound
+            // 3. Play Sound
             AudioClip clipToPlay = nextData.unlockSound != null ? nextData.unlockSound : defaultUnlockSound;
             if (clipToPlay != null && audioSource != null)
             {
                 audioSource.PlayOneShot(clipToPlay);
             }
 
-            // Slide Down
-            while (panelRect.anchoredPosition.y > visiblePosition.y)
+            // 4. Slide Down (Using Distance to prevent math stalls)
+            while (Vector2.Distance(panelRect.anchoredPosition, visiblePosition) > 0.5f)
             {
                 panelRect.anchoredPosition = Vector2.MoveTowards(panelRect.anchoredPosition, visiblePosition, slideSpeed * Time.deltaTime);
                 yield return null;
             }
+            panelRect.anchoredPosition = visiblePosition; // Snap exactly to target
 
-            // Wait
+            // 5. Wait
             yield return new WaitForSeconds(displayDuration);
 
-            // Slide Up
-            while (panelRect.anchoredPosition.y < hiddenPosition.y)
+            // 6. Slide Up (Using Distance)
+            while (Vector2.Distance(panelRect.anchoredPosition, hiddenPosition) > 0.5f)
             {
                 panelRect.anchoredPosition = Vector2.MoveTowards(panelRect.anchoredPosition, hiddenPosition, slideSpeed * Time.deltaTime);
                 yield return null;
             }
+            panelRect.anchoredPosition = hiddenPosition; // Snap exactly back to ceiling
         }
 
-        popupPanel.SetActive(false);
+        // 7. Unlock the gate for the next achievement!
+        isDisplaying = false;
     }
 }

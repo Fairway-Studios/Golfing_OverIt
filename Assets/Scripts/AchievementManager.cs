@@ -18,6 +18,8 @@ public class AchievementManager : MonoBehaviour
         if (Instance == null) { Instance = this; }
         else { Destroy(gameObject); }
 
+        PlayerPrefs.DeleteKey("UnlockedAchievements");
+
         LoadUnlockedAchievements();
     }
 
