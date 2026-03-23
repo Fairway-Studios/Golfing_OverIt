@@ -62,6 +62,13 @@ public class GolfBallController : MonoBehaviour
                 {
                     float distance = Vector2.Distance(hitStartPosition, transform.position);
                     Debug.Log($"[Player {ownerPlayerIndex + 1}] Shot Distance: {distance:F2}m");
+
+                    // If the ball traveled more than 50 units, trigger the achievement!
+                    if (distance >= 50f)
+                    {
+                        // Make sure you create an AchievementData object with this exact ID!
+                        AchievementManager.Instance.UnlockAchievement("LONG_DRIVE");
+                    }
                 }
             }
         }
