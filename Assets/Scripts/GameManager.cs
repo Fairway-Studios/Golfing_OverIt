@@ -469,6 +469,11 @@ public class GameManager : MonoBehaviour
     public void RecordStroke()
     {
         strokeCount++;
+
+        if (strokeCount == 1)
+        {
+            AchievementManager.Instance.UnlockAchievement("FIRST_SWING");
+        }
     }
 
     public int GetStrokeCount() => strokeCount;
