@@ -1,131 +1,137 @@
 using UnityEngine;
 using Unity.Cinemachine;
-using Unity.VisualScripting;
 
 public class CameraController : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private Transform ball;
-    [SerializeField] private CinemachineCamera virtualCamera;
-
-    [Header("Look Ahead")]
-    [SerializeField] private float lookAheadDistance = 4f;
-    [SerializeField] private float lookAheadSmoothing = 4f;
+    [SerializeField] private Camera mainCamera;
 
     [Header("Smoothing")]
     [SerializeField] private float verticalSmoothTime = 1f;
     [SerializeField] private float horizontalSmoothTime = 1f;
 
-    [Header("Asymmetric Vertical Tracking")]
-    [SerializeField] private float upwardDeadzone = 8f;
-    [SerializeField] private float downwardDeadzone = 3f;
-    [SerializeField] private float upwardSmoothTime = 0.5f;
-    [SerializeField] private float downwardSmoothTime = 0.5f;
-    [SerializeField] private float downwardLookAheadMultiplier = 3f;
-    [SerializeField] private float apexVelocityThreshold = 0.5f;
-
     [Header("Manual Camera Control")]
-    [SerializeField] private float manualMoveSpeed = 15f;
+    [SerializeField] private float manualMoveSpeed = 20f;
     [SerializeField] private float returnToTrackingDelay = 2f;
 
     [Header("Swing Tracking")]
     [SerializeField] private bool waitForBothPlayers = true;
-    [SerializeField] private Vector3 preSwingCameraOffset = new Vector3(4f, 1f, 0f);
 
     [Header("Dynamic Zoom")]
     [SerializeField] private float baseOrthographicSize = 12f;
-    [SerializeField] private float maxOrthographicSize = 30f;
+    [SerializeField] private float maxOrthographicSize = 25f;
     [SerializeField] private float speedThreshold = 8f;
     [SerializeField] private float maxSpeed = 20f;
     [SerializeField] private float zoomSmoothTime = 1f;
+    [SerializeField] private float zoomSuppressDuration = 3f;
+
+    [Header("Directional Bias Cameras")]
+    [SerializeField] private CinemachineCamera vcamRight;
+    [SerializeField] private CinemachineCamera vcamLeft;
+
+    [Header("Dynamic Framing — Offsets")]
+    [SerializeField] private Vector2 groundedOffset = new Vector2(-0.3f, 0.2f);
+    [SerializeField] private Vector2 flightOffset = new Vector2(-0.3f, 0.0f);
+    [SerializeField] private float flightVelocityThreshold = 10f;
+
+    [SerializeField] private float maxFallFramingOffset = 0.25f;
+    [SerializeField] private float maxFallSpeed = 20f;
+    [SerializeField] private float fallOffsetSmoothTime = 1f;
+
+    [SerializeField] private bool startFacingRight = true;
+
+    [Header("Dynamic Framing — Blend")]
+    [SerializeField] private float blendDuration = 2f;
+    [SerializeField] private AnimationCurve blendCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+    [SerializeField] private float landingBlendDuration = 0.5f;
 
     private Transform followTarget;
     private Rigidbody2D ballRb;
-
-    private Vector3 currentLookAhead;
     private float velX;
     private float velY;
 
     // Manual camera
-    private bool isManual = false;
+    private bool isManual;
     private Vector2 manualInput;
     private float lastManualInputTime;
     private Vector3 manualOffset;
 
-    private float lastTargetY;
-
-    // Swing tracking state
-    private bool isWaitingForSwings = false;
-    private bool player1HasSwung = false;
-    private bool player2HasSwung = false;
+    // Swing tracking
+    private bool isWaitingForSwings;
+    private bool player1HasSwung;
+    private bool player2HasSwung;
     private Vector3 frozenCameraPosition;
-    private bool isMultiplayer = false;
-    private GolfBallController lastHitBall = null;
+    private bool isMultiplayer;
+    private GolfBallController lastHitBall;
 
     // Ball cycling
     private GolfBallController[] allBalls;
-    private int currentBallIndex = 0;
+    private int currentBallIndex;
 
     // Dynamic zoom
     private float currentZoomVelocity;
     private float targetOrthographicSize;
     private Vector3 lastCameraPosition;
+    private bool suppressZoom;
+    private float suppressZoomUntil;
 
-    // Vertical tracking state
-    private float previousBallVelocityY;
-    private bool isBallDescending = false;
+    // Bias
+    private bool isFacingRight;
+    private bool isGravityNormal = true;
+    private bool isBallInFlight;
 
-    private CinemachinePositionComposer positionComposer;
+    private CinemachineCamera activeCam;
+    private CinemachinePositionComposer composer;
+
+    private enum BlendTrigger { Standard, Landing }
+
+    private struct BlendState
+    {
+        public bool active;
+        public Vector2 from;
+        public Vector2 to;
+        public float elapsed;
+        public float duration;
+    }
+
+    private BlendState blend;
+    private Vector2 currentFramingOffset;
+
+    private float currentFallOffset;
+    private float fallOffsetVelocity;
+
+    private float GravityDir() => isGravityNormal ? -1f : 1f;
 
     void Start()
     {
-        // Create dynamic follow target
         GameObject t = new GameObject("CameraTarget");
         followTarget = t.transform;
 
-        positionComposer = virtualCamera.GetComponentInChildren<CinemachinePositionComposer>();
-
-
-        if (virtualCamera != null)
-        {
-            virtualCamera.Follow = followTarget;
-
-            // Initialize zoom
-            targetOrthographicSize = baseOrthographicSize;
-            if (virtualCamera.Lens.Orthographic)
-            {
-                virtualCamera.Lens.OrthographicSize = baseOrthographicSize;
-            }
-        }
+        targetOrthographicSize = baseOrthographicSize;
+        isFacingRight = startFacingRight;
 
         if (ball != null)
         {
             ballRb = ball.GetComponent<Rigidbody2D>();
             followTarget.position = ball.position;
-            lastTargetY = ball.position.y;
-            lastCameraPosition = followTarget.position;
-            previousBallVelocityY = 0f;
         }
 
-        // Detect if multiplayer
+        lastCameraPosition = mainCamera != null
+            ? mainCamera.transform.position
+            : followTarget.position;
+
+        InitialiseCameras();
         DetectGameMode();
 
-        // Cache all balls
         allBalls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
 
         PrepareForSwings();
     }
 
-    void DetectGameMode()
-    {
-        InputController[] controllers = Object.FindObjectsByType<InputController>(FindObjectsSortMode.None);
-        isMultiplayer = controllers.Length >= 2;
-    }
-
     void LateUpdate()
     {
-        if (ball == null || followTarget == null)
-            return;
+        if (ball == null || followTarget == null) return;
 
         if (isManual && Time.time - lastManualInputTime > returnToTrackingDelay)
         {
@@ -133,135 +139,210 @@ public class CameraController : MonoBehaviour
             manualOffset = Vector3.zero;
         }
 
+        if (suppressZoom && Time.time >= suppressZoomUntil)
+            suppressZoom = false;
+
+        UpdateFlightState();
         UpdateCamera();
+        UpdateFramingBlend();
         UpdateDynamicZoom();
+    }
+
+    private void InitialiseCameras()
+    {
+        if (vcamRight != null) vcamRight.Follow = followTarget;
+        if (vcamLeft != null) vcamLeft.Follow = followTarget;
+
+        currentFramingOffset = GetBaseTargetOffset();
+
+        ApplyActiveCamera();
+        RefreshComposer();
+
+        if (composer != null)
+            composer.Composition.ScreenPosition = currentFramingOffset;
+    }
+
+    private void ApplyActiveCamera()
+    {
+        CinemachineCamera next = isFacingRight ? vcamRight : vcamLeft;
+        if (next == null) return;
+
+        if (vcamRight != null) vcamRight.Priority = 0;
+        if (vcamLeft != null) vcamLeft.Priority = 0;
+
+        next.Priority = 10;
+        activeCam = next;
+    }
+
+    private void RefreshComposer()
+    {
+        composer = activeCam != null
+            ? activeCam.GetComponentInChildren<CinemachinePositionComposer>()
+            : null;
+    }
+
+    private void UpdateFlightState()
+    {
+        if (ballRb == null) return;
+
+        bool wasInFlight = isBallInFlight;
+        isBallInFlight = Mathf.Abs(ballRb.linearVelocity.y) > flightVelocityThreshold;
+
+        if (isBallInFlight && !wasInFlight)
+            StartBlend(BlendTrigger.Standard);
+        else if (!isBallInFlight && wasInFlight)
+            StartBlend(BlendTrigger.Landing);
+    }
+
+    private Vector2 GetBaseTargetOffset()
+    {
+        float g = GravityDir();
+
+        Vector2 target = isBallInFlight ? flightOffset : groundedOffset;
+
+        if (!isBallInFlight)
+            target.y *= -g;
+
+        if (!isFacingRight)
+            target.x = -target.x;
+
+        return target;
+    }
+
+    private void StartBlend(BlendTrigger trigger)
+    {
+        Vector2 targetOffset = GetBaseTargetOffset();
+
+        blend = new BlendState
+        {
+            active = true,
+            from = currentFramingOffset,
+            to = targetOffset,
+            elapsed = 0f,
+            duration = trigger == BlendTrigger.Landing ? landingBlendDuration : blendDuration,
+        };
+    }
+
+    private void UpdateFramingBlend()
+    {
+        if (composer == null) return;
+        if (isWaitingForSwings && waitForBothPlayers && isMultiplayer) return;
+
+        if (blend.active)
+        {
+            blend.elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(blend.elapsed / blend.duration);
+            currentFramingOffset = Vector2.Lerp(blend.from, blend.to, blendCurve.Evaluate(t));
+
+            if (t >= 1f)
+            {
+                currentFramingOffset = blend.to;
+                blend.active = false;
+            }
+        }
+
+        float targetFallOffset = 0f;
+
+        if (ballRb != null)
+        {
+            float fallSpeed = GravityDir() * ballRb.linearVelocity.y;
+
+            if (fallSpeed > 0f)
+                targetFallOffset = Mathf.Clamp01(fallSpeed / maxFallSpeed) * maxFallFramingOffset;
+        }
+
+        currentFallOffset = Mathf.SmoothDamp(
+            currentFallOffset,
+            targetFallOffset,
+            ref fallOffsetVelocity,
+            fallOffsetSmoothTime);
+
+        Vector2 finalOffset = currentFramingOffset;
+        finalOffset.y += GravityDir() * currentFallOffset;
+
+        composer.Composition.ScreenPosition = finalOffset;
     }
 
     private void UpdateCamera()
     {
-        Vector2 ballVelocity = ballRb ? ballRb.linearVelocity : Vector2.zero;
-        float ballSpeed = ballVelocity.magnitude;
-
-        // Detect if ball is descending
-        if (ballRb != null)
-        {
-            if (ballVelocity.y < -apexVelocityThreshold)
-                isBallDescending = true;
-            else if (ballVelocity.y > apexVelocityThreshold)
-                isBallDescending = false;
-
-            previousBallVelocityY = ballVelocity.y;
-        }
-
-        // Manual Mode overrides everything
         if (isManual)
         {
-            manualOffset += new Vector3(manualInput.x, manualInput.y, 0f) * manualMoveSpeed * Time.deltaTime;
+            manualOffset += new Vector3(manualInput.x, manualInput.y, 0f)
+                            * manualMoveSpeed * Time.deltaTime;
+
             Vector3 mpos = ball.position + manualOffset;
-            mpos.z = 0;
+            mpos.z = 0f;
             followTarget.position = mpos;
             return;
         }
 
-        // Waiting for swings
         if (isWaitingForSwings && waitForBothPlayers && isMultiplayer)
         {
-            float smoothX = Mathf.SmoothDamp(followTarget.position.x, frozenCameraPosition.x, ref velX, horizontalSmoothTime);
-            float smoothY = Mathf.SmoothDamp(followTarget.position.y, frozenCameraPosition.y, ref velY, verticalSmoothTime);
-            followTarget.position = new Vector3(smoothX, smoothY, 0);
+            float sx = Mathf.SmoothDamp(followTarget.position.x,
+                frozenCameraPosition.x, ref velX, horizontalSmoothTime);
+
+            float sy = Mathf.SmoothDamp(followTarget.position.y,
+                frozenCameraPosition.y, ref velY, verticalSmoothTime);
+
+            followTarget.position = new Vector3(sx, sy, 0f);
             return;
         }
 
-        Vector2 targetLookAhead = Vector2.zero;
+        Vector3 target = ball.position;
+        target.z = 0f;
 
-        // Horizontal & vertical lookahead while ball is moving
-        if (ballSpeed > 0.05f)
-        {
-            targetLookAhead.x = ballVelocity.x != 0 ? Mathf.Sign(ballVelocity.x) * lookAheadDistance : 0f;
+        float smoothX = Mathf.SmoothDamp(followTarget.position.x, target.x, ref velX, horizontalSmoothTime);
+        float smoothY = Mathf.SmoothDamp(followTarget.position.y, target.y, ref velY, verticalSmoothTime);
 
-            // Vertical lookahead
-            if (ballVelocity.y != 0)
-            {
-                float yLookAhead = Mathf.Sign(ballVelocity.y) * lookAheadDistance;
-                if (isBallDescending && ballVelocity.y < 0)
-                    yLookAhead *= downwardLookAheadMultiplier;
-
-                targetLookAhead.y = yLookAhead;
-            }
-        }
-
-        currentLookAhead.x = Mathf.Lerp(currentLookAhead.x, targetLookAhead.x, Time.deltaTime * lookAheadSmoothing);
-        currentLookAhead.y = Mathf.Lerp(currentLookAhead.y, targetLookAhead.y, Time.deltaTime * lookAheadSmoothing);
-
-        Vector3 target = ball.position + currentLookAhead;
-        target.z = 0;
-
-        // Horizontal smoothing
-        float smoothX2 = Mathf.SmoothDamp(followTarget.position.x, target.x, ref velX, horizontalSmoothTime);
-
-        float smoothY2 = lastTargetY;
-
-        float movingThreshold = 0.05f;
-        if (ballSpeed > movingThreshold)
-        {
-            float dy = target.y - lastTargetY;
-            bool movingUp = dy > 0;
-
-            float activeDeadzone = movingUp ? upwardDeadzone : downwardDeadzone;
-            float activeSmoothTime = movingUp ? upwardSmoothTime : downwardSmoothTime;
-
-            if (Mathf.Abs(dy) > activeDeadzone)
-                lastTargetY = Mathf.SmoothDamp(lastTargetY, target.y, ref velY, activeSmoothTime);
-
-            smoothY2 = lastTargetY;
-        }
-        else
-        {
-            smoothY2 = Mathf.SmoothDamp(followTarget.position.y, ball.position.y, ref velY, downwardSmoothTime);
-            lastTargetY = smoothY2;
-        }
-
-        followTarget.position = new Vector3(smoothX2, smoothY2, 0);
+        followTarget.position = new Vector3(smoothX, smoothY, 0f);
     }
 
     private void UpdateDynamicZoom()
     {
-        if (virtualCamera == null || !virtualCamera.Lens.Orthographic)
+        if (activeCam == null || !activeCam.Lens.Orthographic) return;
+
+        if ((isWaitingForSwings && waitForBothPlayers && isMultiplayer) || suppressZoom)
+        {
+            lastCameraPosition = mainCamera != null
+                ? mainCamera.transform.position
+                : followTarget.position;
+
+            float resetSize = Mathf.SmoothDamp(
+                activeCam.Lens.OrthographicSize,
+                baseOrthographicSize,
+                ref currentZoomVelocity,
+                zoomSmoothTime);
+
+            if (vcamRight != null) vcamRight.Lens.OrthographicSize = resetSize;
+            if (vcamLeft != null) vcamLeft.Lens.OrthographicSize = resetSize;
             return;
-
-        // Calculate camera speed
-        Vector3 currentCameraPosition = followTarget.position;
-        float cameraSpeed = (currentCameraPosition - lastCameraPosition).magnitude / Time.deltaTime;
-        lastCameraPosition = currentCameraPosition;
-
-        // Calculate target zoom based on speed
-        if (cameraSpeed < speedThreshold)
-        {
-            targetOrthographicSize = baseOrthographicSize;
-        }
-        else
-        {
-            // Normalize speed between threshold and max speed
-            float normalizedSpeed = Mathf.Clamp01((cameraSpeed - speedThreshold) / (maxSpeed - speedThreshold));
-            targetOrthographicSize = Mathf.Lerp(baseOrthographicSize, maxOrthographicSize, normalizedSpeed);
         }
 
-        // Smoothly interpolate to target zoom
+        Vector3 currentCamPos = mainCamera != null
+            ? mainCamera.transform.position
+            : followTarget.position;
+
+        float cameraSpeed = (currentCamPos - lastCameraPosition).magnitude / Time.deltaTime;
+        lastCameraPosition = currentCamPos;
+
+        targetOrthographicSize = cameraSpeed < speedThreshold
+            ? baseOrthographicSize
+            : Mathf.Lerp(baseOrthographicSize, maxOrthographicSize,
+                Mathf.Clamp01((cameraSpeed - speedThreshold) / (maxSpeed - speedThreshold)));
+
         float newSize = Mathf.SmoothDamp(
-            virtualCamera.Lens.OrthographicSize,
+            activeCam.Lens.OrthographicSize,
             targetOrthographicSize,
             ref currentZoomVelocity,
-            zoomSmoothTime
-        );
+            zoomSmoothTime);
 
-        virtualCamera.Lens.OrthographicSize = newSize;
+        if (vcamRight != null) vcamRight.Lens.OrthographicSize = newSize;
+        if (vcamLeft != null) vcamLeft.Lens.OrthographicSize = newSize;
     }
 
-    // Called when players are ready to take their shots
     public void PrepareForSwings()
     {
-        if (!waitForBothPlayers || !isMultiplayer)
-            return;
+        if (!waitForBothPlayers || !isMultiplayer) return;
 
         isWaitingForSwings = true;
         player1HasSwung = false;
@@ -270,96 +351,36 @@ public class CameraController : MonoBehaviour
 
         allBalls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
 
-        frozenCameraPosition = ball.position + preSwingCameraOffset;
-        frozenCameraPosition.z = 0;
+        frozenCameraPosition = ball.position;
+        frozenCameraPosition.z = 0f;
 
-        // Reset velocities for smooth transition
         velX = 0f;
         velY = 0f;
-
-        // Reset vertical tracking state
-        isBallDescending = false;
-        previousBallVelocityY = 0f;
     }
 
-    // Called by InputController when a player swings
     public void OnPlayerSwung(int playerIndex)
     {
-        if (!isWaitingForSwings)
-            return;
+        if (!isWaitingForSwings) return;
 
-        // Find and track the ball that was just hit
         foreach (var b in allBalls)
         {
-            if (b.GetOwnerIndex() == playerIndex)
-            {
-                lastHitBall = b;
-                break;
-            }
+            if (b.GetOwnerIndex() == playerIndex) { lastHitBall = b; break; }
         }
 
-        if (playerIndex == 0)
-            player1HasSwung = true;
-        else if (playerIndex == 1)
-            player2HasSwung = true;
+        if (playerIndex == 0) player1HasSwung = true;
+        else if (playerIndex == 1) player2HasSwung = true;
 
-        // Check if both players have swung
         if (player1HasSwung && player2HasSwung)
-        {
-            StartTracking();
-        }
-    }
-
-    private void StartTracking()
-    {
-        isWaitingForSwings = false;
-
-        // Switch to tracking the last hit ball
-        if (lastHitBall != null)
-        {
-            SetBall(lastHitBall.transform);
-
-            // Update current ball index to match
-            for (int i = 0; i < allBalls.Length; i++)
-            {
-                if (allBalls[i] == lastHitBall)
-                {
-                    currentBallIndex = i;
-                    break;
-                }
-            }
-        }
-
-        currentLookAhead = Vector3.zero;
-        lastTargetY = followTarget.position.y;
-        velX = 0f;
-        velY = 0f;
-        isBallDescending = false;
-        previousBallVelocityY = 0f;
+            isWaitingForSwings = false;
     }
 
     public void CycleTargetBall()
     {
         allBalls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
+        if (allBalls.Length == 0 || isWaitingForSwings) return;
 
-        if (allBalls.Length == 0)
-            return;
-
-        if (isWaitingForSwings)
-            return;
-
-        // Cycle to next ball
         currentBallIndex = (currentBallIndex + 1) % allBalls.Length;
-
-        GolfBallController targetBall = allBalls[currentBallIndex];
-
-        if (targetBall != null)
-        {
-            SetBall(targetBall.transform);
-            lastHitBall = targetBall;
-
-            currentLookAhead = Vector3.zero;
-        }
+        SetBall(allBalls[currentBallIndex].transform);
     }
 
     public void OnCameraMove(Vector2 input)
@@ -377,40 +398,49 @@ public class CameraController : MonoBehaviour
         }
     }
 
-    public void ResetToAutomatic()
+    public void SwapHorizontalBias()
     {
-        isManual = false;
-        manualOffset = Vector3.zero;
-        manualInput = Vector2.zero;
+        SetFacingDirection(!isFacingRight);
+    }
+
+    public void SetFacingDirection(bool faceRight)
+    {
+        if (isFacingRight == faceRight) return;
+
+        isFacingRight = faceRight;
+
+        ApplyActiveCamera();
+        RefreshComposer();
+
+        StartBlend(BlendTrigger.Standard);
+        SuppressZoomFor(zoomSuppressDuration);
+    }
+
+    public void SwapVerticalBias()
+    {
+        isGravityNormal = !isGravityNormal;
+        StartBlend(BlendTrigger.Standard);
     }
 
     public void SetBall(Transform newBall)
     {
         ball = newBall;
-        if (ball != null)
-        {
-            ballRb = ball.GetComponent<Rigidbody2D>();
-            lastTargetY = ball.position.y;
-        }
+        if (ball == null) return;
+        ballRb = ball.GetComponent<Rigidbody2D>();
     }
 
-    public void SetWaitForBothPlayers(bool wait)
+    private void SuppressZoomFor(float seconds)
     {
-        waitForBothPlayers = wait;
+        suppressZoom = true;
+        suppressZoomUntil = Time.time + seconds;
+        currentZoomVelocity = 0f;
+        targetOrthographicSize = baseOrthographicSize;
     }
 
-    public bool IsWaitingForSwings()
+    private void DetectGameMode()
     {
-        return isWaitingForSwings;
-    }
-
-    public void InvertCamCompositionY()
-    {
-        positionComposer.Composition.ScreenPosition.y = -positionComposer.Composition.ScreenPosition.y;
-    }
-
-    public void InvertCamCompositionX()
-    {
-        positionComposer.Composition.ScreenPosition.x = -positionComposer.Composition.ScreenPosition.x;
+        InputController[] controllers =
+            Object.FindObjectsByType<InputController>(FindObjectsSortMode.None);
+        isMultiplayer = controllers.Length >= 2;
     }
 }
