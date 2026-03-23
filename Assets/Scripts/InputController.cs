@@ -180,7 +180,7 @@ public class InputController : MonoBehaviour
         Debug.Log("Invert Cam X triggered");
 
         if (cameraController != null && context.performed)
-            cameraController.InvertCamCompositionX();
+            cameraController.SwapHorizontalBias();
     }
 
     public void OnMoveCamera(InputAction.CallbackContext context)

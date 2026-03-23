@@ -48,7 +48,7 @@ public class GravityFlipZone : MonoBehaviour
             if (gameManager != null)
                 gameManager.SetPlayerOffsetFromBall(flippedOffset);
 
-            cameraController.InvertCamCompositionY();
+            cameraController.SwapVerticalBias();
         }
         else
         {
@@ -60,7 +60,7 @@ public class GravityFlipZone : MonoBehaviour
             if (gameManager != null)
                 gameManager.SetPlayerOffsetFromBall(originalOffset);
 
-            cameraController.InvertCamCompositionY();
+            cameraController.SwapVerticalBias();
         }
     }
 

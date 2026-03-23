@@ -475,7 +475,7 @@ public class GameManager : MonoBehaviour
     {
         strokeCount++;
 
-        if (strokeCount == 1)
+        if (strokeCount == 1 && AchievementManager.Instance != null)
         {
             AchievementManager.Instance.UnlockAchievement("FIRST_SWING");
         }
