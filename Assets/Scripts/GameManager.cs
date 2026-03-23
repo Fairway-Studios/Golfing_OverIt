@@ -60,49 +60,64 @@ public class GameManager : MonoBehaviour
             PlayerData data = SaveSystem.LoadPlayer();
             if (data != null)
             {
-                Vector3 savedPos = new Vector3(data.position[0], data.position[1], data.position[2]);
+                // Restore metrics
+                strokeCount = data.strokes;
+                elapsedTime = data.time;
 
-                
+                // --- NEW: The Micro-Offset ---
+                // 0.05f is virtually invisible, but enough to force a clean collision check
+                Vector3 microOffset = new Vector3(0, 0.05f, 0);
+
+                // Extract exact saved positions and apply the tiny lift
+                Vector3 savedPlayerPos = new Vector3(data.playerPosition[0], data.playerPosition[1], data.playerPosition[2]) + microOffset;
+                Vector3 savedBallPos = new Vector3(data.ballPosition[0], data.ballPosition[1], data.ballPosition[2]) + microOffset;
+
                 InputController[] controllers = Object.FindObjectsByType<InputController>(FindObjectsSortMode.None);
 
-                // 1. Move Player
-                if (players[0] != null)
+                // 1. Move Ball
+                GolfBallController[] balls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
+                if (balls != null && balls.Length > 0 && balls[0] != null)
                 {
-                    players[0].position = savedPos;
-                    Rigidbody2D rb = players[0].GetComponent<Rigidbody2D>();
-                    if (rb != null) rb.linearVelocity = Vector2.zero;
+                    balls[0].transform.position = savedBallPos;
+                    Rigidbody2D ballRb = balls[0].GetComponent<Rigidbody2D>();
+                    if (ballRb != null)
+                    {
+                        ballRb.position = savedBallPos;
+                        ballRb.linearVelocity = Vector2.zero;
+                        ballRb.angularVelocity = 0f;
+                        // Force the physics engine to cleanly reset this object
+                        ballRb.Sleep();
+                    }
+                    balls[0].ResetForNextShot();
                 }
 
-                
+                // 2. Move Player
+                if (players[0] != null)
+                {
+                    players[0].position = savedPlayerPos;
+                    Rigidbody2D playerRb = players[0].GetComponent<Rigidbody2D>();
+                    if (playerRb != null)
+                    {
+                        playerRb.position = savedPlayerPos;
+                        playerRb.linearVelocity = Vector2.zero;
+                        // Force the physics engine to cleanly reset this object
+                        playerRb.Sleep();
+                    }
+                }
+
+                // 3. Reset Physics Rigs
                 foreach (var c in controllers)
                 {
                     c.OnPlayerTeleported();
                 }
 
-                // 2. Move Ball
-                GolfBallController[] balls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
-                if (balls != null && balls.Length > 0 && balls[0] != null)
-                {
-                    Vector3 ballPos = savedPos - playerOffsetFromBall;
-                    balls[0].transform.position = ballPos;
-
-                    Rigidbody2D ballRb = balls[0].GetComponent<Rigidbody2D>();
-                    if (ballRb != null)
-                    {
-                        ballRb.position = ballPos;
-                        ballRb.linearVelocity = Vector2.zero;
-                    }
-
-                    balls[0].ResetForNextShot();
-                }
-
-                // 3. Move Camera
+                // 4. Move Camera to the Ball
                 if (cameraTransform != null)
                 {
-                    cameraTransform.position = new Vector3(savedPos.x, savedPos.y, cameraTransform.position.z);
+                    cameraTransform.position = new Vector3(savedBallPos.x, savedBallPos.y, cameraTransform.position.z);
                 }
 
-                Debug.Log("Game Loaded Successfully and Physics Reset!");
+                Debug.Log("Game Loaded: Exact positions restored and phasing prevented.");
             }
         }
     }

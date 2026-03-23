@@ -3,17 +3,20 @@ using UnityEngine;
 [System.Serializable]
 public class PlayerData
 {
-    public float[] position;
+    public float[] playerPosition;
+    public float[] ballPosition;
     public int sceneIndex;
+    public int strokes;
+    public float time;
 
-    // Constructor: Converts the Game World data into Save Data
-    public PlayerData(Transform playerTransform, int currentSceneIndex)
+    // Constructor saves both positions exactly as they are
+    public PlayerData(Transform playerTransform, Transform ballTransform, int currentSceneIndex, int currentStrokes, float currentTime)
     {
         sceneIndex = currentSceneIndex;
+        strokes = currentStrokes;
+        time = currentTime;
 
-        position = new float[3];
-        position[0] = playerTransform.position.x;
-        position[1] = playerTransform.position.y;
-        position[2] = playerTransform.position.z;
+        playerPosition = new float[3] { playerTransform.position.x, playerTransform.position.y, playerTransform.position.z };
+        ballPosition = new float[3] { ballTransform.position.x, ballTransform.position.y, ballTransform.position.z };
     }
 }

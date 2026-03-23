@@ -4,16 +4,16 @@ using System.IO;
 public static class SaveSystem
 {
     // Saves the file to: C:/Users/[User]/AppData/LocalLow/FairwayStudios/GolfingOverIt/player.json
-    public static void SavePlayer(Transform player, int sceneIndex)
+    public static void SavePlayer(Transform player, Transform ball, int sceneIndex, int strokes, float time)
     {
-        PlayerData data = new PlayerData(player, sceneIndex);
+        // Pass both the player and the ball to the data container
+        PlayerData data = new PlayerData(player, ball, sceneIndex, strokes, time);
         string json = JsonUtility.ToJson(data);
         string path = Application.persistentDataPath + "/player.json";
 
         File.WriteAllText(path, json);
         Debug.Log("Game Saved to: " + path);
     }
-
     public static PlayerData LoadPlayer()
     {
         string path = Application.persistentDataPath + "/player.json";

@@ -118,20 +118,21 @@ public class SceneMGR : MonoBehaviour
 
     public void SaveGame()
     {
-        // Find player if not cached
-        if (playerTransform == null)
-        {
-            GameObject p = GameObject.FindGameObjectWithTag("Player");
-            if (p != null) playerTransform = p.transform;
-        }
+        // Find both objects
+        GameObject p = GameObject.FindGameObjectWithTag("Player");
+        GameObject ball = GameObject.FindGameObjectWithTag("GolfBall");
 
-        if (playerTransform != null)
+        if (p != null && ball != null)
         {
-            SaveSystem.SavePlayer(playerTransform, SceneManager.GetActiveScene().buildIndex);
+            int currentStrokes = gameManager.GetStrokeCount();
+            float currentTime = gameManager.GetElapsedTime();
+
+            // Send both to be saved
+            SaveSystem.SavePlayer(p.transform, ball.transform, SceneManager.GetActiveScene().buildIndex, currentStrokes, currentTime);
         }
         else
         {
-            Debug.LogError("Cannot Save: Player Transform not found!");
+            Debug.LogError("Cannot Save: Could not find either the Player or the Golf Ball in the scene!");
         }
     }
 
