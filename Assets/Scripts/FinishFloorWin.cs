@@ -24,6 +24,9 @@ public class FinishFloorWin : MonoBehaviour
         {
             Debug.Log("[FinishFloor] WIN CONDITION MET — Attempting to enable WinUI.");
 
+            // --- ACHIEVEMENT: Level Complete ---
+            AchievementManager.Instance.UnlockAchievement("LEVEL_COMPLETE");
+
             if (winUI != null)
             {
                 winUI.SetActive(true);

@@ -129,6 +129,9 @@ public class SceneMGR : MonoBehaviour
 
             // Send both to be saved
             SaveSystem.SavePlayer(p.transform, ball.transform, SceneManager.GetActiveScene().buildIndex, currentStrokes, currentTime);
+
+            // --- ACHIEVEMENT: First Save ---
+            AchievementManager.Instance.UnlockAchievement("FIRST_SAVE");
         }
         else
         {

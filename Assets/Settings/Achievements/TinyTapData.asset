@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1af0a44fae0c28642af720692756dea8, type: 3}
-  m_Name: LongDriveData
+  m_Name: TinyTapData
   m_EditorClassIdentifier: 
-  achievementID: LONG_DRIVE
-  title: Happy Gilmore
-  description: Take a shot longer than 50 m
-  icon: {fileID: 21300000, guid: 1f806a850e4ff264eafc4935f65793b8, type: 3}
+  achievementID: TINY_TAP
+  title: Surgical Precision
+  description: Take a shot with less than 1m of travel
+  icon: {fileID: 0}
   unlockSound: {fileID: 0}

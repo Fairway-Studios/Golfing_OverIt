@@ -69,6 +69,26 @@ public class GolfBallController : MonoBehaviour
                         // Make sure you create an AchievementData object with this exact ID!
                         AchievementManager.Instance.UnlockAchievement("LONG_DRIVE");
                     }
+
+                    // --- ACHIEVEMENT: Surgical Precision (Tiny Shot) ---
+                    if (distance < 1f && distance > 0.1f)
+                    {
+                        AchievementManager.Instance.UnlockAchievement("TINY_TAP");
+                    }
+
+                    // --- ACHIEVEMENT: Gravity is Cruel (Long Fall) ---
+                    // If your starting Y position was 20 units HIGHER than your ending Y position
+                    if (hitStartPosition.y - transform.position.y >= 20f)
+                    {
+                        AchievementManager.Instance.UnlockAchievement("LONG_FALL");
+                    }
+                }
+
+                // --- ACHIEVEMENT: I Can See My House! (High Altitude) ---
+                // We check this after the ball stops to see if you landed really high up
+                if (transform.position.y >= 50f)
+                {
+                    AchievementManager.Instance.UnlockAchievement("HIGH_ALTITUDE");
                 }
             }
         }
@@ -84,6 +104,13 @@ public class GolfBallController : MonoBehaviour
         {
             Vector2 contactPoint = collision.contacts[0].point;
             TriggerBounceEffects(verticalImpact, contactPoint);
+        }
+
+        // --- ACHIEVEMENT: Massive Ricochet ---
+        // If the impact is extremely hard (adjust the 15f if it's too easy/hard)
+        if (verticalImpact >= 15f)
+        {
+            AchievementManager.Instance.UnlockAchievement("HARD_BOUNCE");
         }
     }
 
