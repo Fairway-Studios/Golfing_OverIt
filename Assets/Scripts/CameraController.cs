@@ -213,6 +213,11 @@ public class CameraController : MonoBehaviour
     {
         Vector2 targetOffset = GetBaseTargetOffset();
 
+        if (Mathf.Sign(currentFramingOffset.x) != Mathf.Sign(targetOffset.x))
+        {
+            currentFramingOffset.x = targetOffset.x;
+        }
+
         blend = new BlendState
         {
             active = true,
@@ -412,7 +417,13 @@ public class CameraController : MonoBehaviour
         ApplyActiveCamera();
         RefreshComposer();
 
+        currentFramingOffset = GetBaseTargetOffset();
+
+        if (composer != null)
+            composer.Composition.ScreenPosition = currentFramingOffset;
+
         StartBlend(BlendTrigger.Standard);
+
         SuppressZoomFor(zoomSuppressDuration);
     }
 
