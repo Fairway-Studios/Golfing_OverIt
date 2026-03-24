@@ -114,6 +114,8 @@ public class ObstaclePlacement2D : MonoBehaviour
         FindBallsByOwnerIndex();
 
         bool isMultiplayerObstacleMode = blueBall != null && redBall != null;
+        bool hasAnaglyphSettings = blueAnaglyphSettings != null && redAnaglyphSettings != null;
+        bool useObstacleAnaglyphMode = isMultiplayerObstacleMode && hasAnaglyphSettings;
 
         float minX = mountainStartX + edgePaddingX;
         float maxX = mountainStartX + mountainWidth - edgePaddingX;
@@ -158,12 +160,23 @@ public class ObstaclePlacement2D : MonoBehaviour
 
                 GameObject obj = Instantiate(prefab, worldPos, rot, obstaclesRoot);
 
-                if (isMultiplayerObstacleMode)
+                if (useObstacleAnaglyphMode)
                 {
+                    SetObstacleAnaglyphControllerEnabled(obj, true);
+
                     ObstacleBallCollision2D.ObstacleColor color = AssignRandomAnaglyphSettings(obj, rng);
                     ApplyObstacleLayer(obj, color);
                     SetupObstacleCollision(obj, color);
                 }
+                else
+                {
+                    // Singleplayer, or missing anaglyph settings on the terrain generator:
+                    // disable the obstacle's anaglyph rendering controller completely.
+                    SetObstacleAnaglyphControllerEnabled(obj, false);
+                    foreach (var r in obj.GetComponentsInChildren<SpriteRenderer>(true)) r.color = Color.white;
+                    foreach (var r in obj.GetComponentsInChildren<SpriteRenderer>(true)) r.material = new Material(Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default"));
+                
+            }
 
                 _spawned.Add(obj);
                 break;
@@ -264,16 +277,33 @@ public class ObstaclePlacement2D : MonoBehaviour
 
     public void RefreshSpawnedObstacleAnaglyphs()
     {
+        FindBallsByOwnerIndex();
+
+        bool isMultiplayerObstacleMode = blueBall != null && redBall != null;
+        bool hasAnaglyphSettings = blueAnaglyphSettings != null && redAnaglyphSettings != null;
+        bool useObstacleAnaglyphMode = isMultiplayerObstacleMode && hasAnaglyphSettings;
+
         for (int i = 0; i < _spawned.Count; i++)
         {
             GameObject obj = _spawned[i];
             if (obj == null) continue;
 
+            if (!useObstacleAnaglyphMode)
+            {
+                SetObstacleAnaglyphControllerEnabled(obj, false);
+                foreach (var r in obj.GetComponentsInChildren<SpriteRenderer>(true)) r.color = Color.white;
+                foreach (var r in obj.GetComponentsInChildren<SpriteRenderer>(true)) r.material = new Material(Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default"));
+                continue;
+            }
+
             if (_spawnedObstacleColors.TryGetValue(obj, out var color))
             {
-                // IMPORTANT:
-                // Do NOT recache originals here, or colors will drift / stack.
+                SetObstacleAnaglyphControllerEnabled(obj, true);
                 ApplyAnaglyphSettingsToObject(obj, color, false);
+            }
+            else
+            {
+                SetObstacleAnaglyphControllerEnabled(obj, false);
             }
         }
     }
@@ -485,5 +515,41 @@ public class ObstaclePlacement2D : MonoBehaviour
         }
 
         return 0f;
+    }
+
+
+    void SetObstacleAnaglyphControllerEnabled(GameObject obj, bool enabled)
+    {
+        if (obj == null) return;
+
+        AnaglyphRenderingController controller = obj.GetComponentInChildren<AnaglyphRenderingController>(true);
+        if (controller == null) return;
+
+        if (!enabled)
+        {
+            // Make sure it unsubscribes before disabling
+            MethodInfo onDisableMethod = typeof(AnaglyphRenderingController).GetMethod(
+                "OnDisable",
+                BindingFlags.Instance | BindingFlags.NonPublic
+            );
+
+            if (onDisableMethod != null)
+                onDisableMethod.Invoke(controller, null);
+        }
+
+        controller.enabled = enabled;
+
+        if (enabled)
+        {
+            MethodInfo onEnableMethod = typeof(AnaglyphRenderingController).GetMethod(
+                "OnEnable",
+                BindingFlags.Instance | BindingFlags.NonPublic
+            );
+
+            if (onEnableMethod != null)
+                onEnableMethod.Invoke(controller, null);
+
+            controller.ApplyHSVAdjustment();
+        }
     }
 }
