@@ -15,5 +15,5 @@ MonoBehaviour:
   achievementID: CENTURY_CLUB
   title: SISYPHUS
   description: Take a 100 strokes in one game
-  icon: {fileID: 0}
-  unlockSound: {fileID: 0}
+  icon: {fileID: 5804943295512731648, guid: 2d608475438fdbb41a25762eb4e7e66b, type: 3}
+  unlockSound: {fileID: 8300000, guid: b03d128b0bb609b4a8c7be575b4c74e0, type: 3}

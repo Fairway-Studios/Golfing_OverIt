@@ -15,5 +15,5 @@ MonoBehaviour:
   achievementID: LONG_FALL
   title: Gravity is Cruel
   description: Fall back a massive distance
-  icon: {fileID: 0}
-  unlockSound: {fileID: 0}
+  icon: {fileID: -2484182949620575169, guid: 7dbd0166db59dbb4b818cb3a39ea1082, type: 3}
+  unlockSound: {fileID: 8300000, guid: b03d128b0bb609b4a8c7be575b4c74e0, type: 3}

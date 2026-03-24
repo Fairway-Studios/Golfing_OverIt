@@ -16,4 +16,4 @@ MonoBehaviour:
   title: Test
   description: It Works
   icon: {fileID: 4551953416226541976, guid: 1d7069d11b97a3d45ab0b612e8903ebd, type: 3}
-  unlockSound: {fileID: 0}
+  unlockSound: {fileID: 8300000, guid: b03d128b0bb609b4a8c7be575b4c74e0, type: 3}

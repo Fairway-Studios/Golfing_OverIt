@@ -15,5 +15,5 @@ MonoBehaviour:
   achievementID: HIGH_ALTITUDE
   title: I can see my house!
   description: Reach a height of 50 m in one shot
-  icon: {fileID: 0}
-  unlockSound: {fileID: 0}
+  icon: {fileID: -5641216039885835550, guid: 500badb1ef5858649b2750ba860bfdba, type: 3}
+  unlockSound: {fileID: 8300000, guid: b03d128b0bb609b4a8c7be575b4c74e0, type: 3}

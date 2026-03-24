@@ -15,5 +15,5 @@ MonoBehaviour:
   achievementID: LONG_DRIVE
   title: Happy Gilmore
   description: Take a shot longer than 50 m
-  icon: {fileID: 21300000, guid: 1f806a850e4ff264eafc4935f65793b8, type: 3}
-  unlockSound: {fileID: 0}
+  icon: {fileID: 5318169704763272664, guid: 4d6dfe2efd09878408e4b40c3a934fdc, type: 3}
+  unlockSound: {fileID: 8300000, guid: b03d128b0bb609b4a8c7be575b4c74e0, type: 3}

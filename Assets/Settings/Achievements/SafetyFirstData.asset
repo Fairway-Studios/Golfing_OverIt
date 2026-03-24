@@ -15,5 +15,5 @@ MonoBehaviour:
   achievementID: FIRST_SAVE
   title: Safety First
   description: Save progress for the first time
-  icon: {fileID: 0}
-  unlockSound: {fileID: 0}
+  icon: {fileID: -6228137746407852170, guid: 0ba67c1fef93f1947b415958eda85ede, type: 3}
+  unlockSound: {fileID: 8300000, guid: b03d128b0bb609b4a8c7be575b4c74e0, type: 3}

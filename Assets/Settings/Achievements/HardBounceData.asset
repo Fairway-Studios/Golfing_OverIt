@@ -15,5 +15,5 @@ MonoBehaviour:
   achievementID: HARD_BOUNCE
   title: Pinball Wizard
   description: Ricochet off an obstacle with force
-  icon: {fileID: 0}
-  unlockSound: {fileID: 0}
+  icon: {fileID: 6010786457827662245, guid: 99988f7bff8222d41a63ef64b06ade78, type: 3}
+  unlockSound: {fileID: 8300000, guid: b03d128b0bb609b4a8c7be575b4c74e0, type: 3}

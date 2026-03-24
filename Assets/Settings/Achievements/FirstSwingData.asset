@@ -15,5 +15,5 @@ MonoBehaviour:
   achievementID: FIRST_SWING
   title: Fore!
   description: Take your very first swing
-  icon: {fileID: 0}
-  unlockSound: {fileID: 0}
+  icon: {fileID: -8336911221237407252, guid: a7125888859cf934baeb2c7168ac30a3, type: 3}
+  unlockSound: {fileID: 8300000, guid: b03d128b0bb609b4a8c7be575b4c74e0, type: 3}
