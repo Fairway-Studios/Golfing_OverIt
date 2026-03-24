@@ -174,9 +174,8 @@ public class ObstaclePlacement2D : MonoBehaviour
                     // disable the obstacle's anaglyph rendering controller completely.
                     SetObstacleAnaglyphControllerEnabled(obj, false);
                     foreach (var r in obj.GetComponentsInChildren<SpriteRenderer>(true)) r.color = Color.white;
-                    foreach (var r in obj.GetComponentsInChildren<SpriteRenderer>(true)) r.material = new Material(Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default"));
-                
-            }
+
+                }
 
                 _spawned.Add(obj);
                 break;
@@ -292,7 +291,6 @@ public class ObstaclePlacement2D : MonoBehaviour
             {
                 SetObstacleAnaglyphControllerEnabled(obj, false);
                 foreach (var r in obj.GetComponentsInChildren<SpriteRenderer>(true)) r.color = Color.white;
-                foreach (var r in obj.GetComponentsInChildren<SpriteRenderer>(true)) r.material = new Material(Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default"));
                 continue;
             }
 
