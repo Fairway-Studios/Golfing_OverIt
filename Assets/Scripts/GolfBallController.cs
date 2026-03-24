@@ -107,9 +107,6 @@ public class GolfBallController : MonoBehaviour
         }
 
         // --- ACHIEVEMENT: Massive Ricochet ---
-        // Temporarily print the impact speed to the console
-        Debug.Log($"IMPACT FORCE: {verticalImpact}");
-
         if (verticalImpact >= 30f && AchievementManager.Instance != null)
         {
             AchievementManager.Instance.UnlockAchievement("HARD_BOUNCE");

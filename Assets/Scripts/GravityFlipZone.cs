@@ -3,7 +3,7 @@ using UnityEngine;
 public class GravityFlipZone : MonoBehaviour
 {
     public bool flipGravity = true;
-    public float originalGravityScale = 1f;
+    public float originalGravityScale = 2f;
     public Transform playerVisual;
 
     private Vector3 originalOffset;
