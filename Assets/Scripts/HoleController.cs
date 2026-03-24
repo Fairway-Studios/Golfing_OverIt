@@ -21,6 +21,29 @@ public class HoleController : MonoBehaviour
 
     private bool ballSunk = false;
 
+
+    private void Awake()
+    {
+        if (gameOverPanel == null)
+        {
+            GameObject[] allObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+
+            foreach (GameObject obj in allObjects)
+            {
+                if (obj.name == "WinUI")
+                {
+                    gameOverPanel = obj;
+                    break;
+                }
+            }
+        }
+
+        if (gameOverPanel == null)
+            Debug.LogWarning("[Hole] Could not find WinUI, even with inactive search.");
+        else
+            Debug.Log("[Hole] Found WinUI: " + gameOverPanel.name + " | ActiveSelf: " + gameOverPanel.activeSelf);
+    }
+
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (ballSunk) return;

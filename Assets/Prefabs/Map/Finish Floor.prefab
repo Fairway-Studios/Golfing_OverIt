@@ -220,7 +220,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   holeSFX: {fileID: 8300000, guid: 962a47cad39992047a24db6a5d965c75, type: 3}
   holeParticles: {fileID: 7226175442575580769}
-  gameOverPanel: {fileID: 182412621365820843, guid: 57d6e94d92ea143419428e33cb96e9b0, type: 3}
+  gameOverPanel: {fileID: 0}
   gameOverDelay: 3
   guaranteedSinkSpeed: 2
   impossibleSinkSpeed: 12
