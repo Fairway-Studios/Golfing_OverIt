@@ -64,21 +64,21 @@ public class GolfBallController : MonoBehaviour
                     Debug.Log($"[Player {ownerPlayerIndex + 1}] Shot Distance: {distance:F2}m");
 
                     // If the ball traveled more than 50 units, trigger the achievement!
-                    if (distance >= 50f)
+                    if (distance >= 50f && AchievementManager.Instance != null)
                     {
                         // Make sure you create an AchievementData object with this exact ID!
                         AchievementManager.Instance.UnlockAchievement("LONG_DRIVE");
                     }
 
                     // --- ACHIEVEMENT: Surgical Precision (Tiny Shot) ---
-                    if (distance < 1f && distance > 0.1f)
+                    if (distance < 1f && distance > 0.1f && AchievementManager.Instance != null)
                     {
                         AchievementManager.Instance.UnlockAchievement("TINY_TAP");
                     }
 
                     // --- ACHIEVEMENT: Gravity is Cruel (Long Fall) ---
                     // If your starting Y position was 20 units HIGHER than your ending Y position
-                    if (hitStartPosition.y - transform.position.y >= 20f)
+                    if (hitStartPosition.y - transform.position.y >= 20f && AchievementManager.Instance != null)
                     {
                         AchievementManager.Instance.UnlockAchievement("LONG_FALL");
                     }
@@ -86,7 +86,7 @@ public class GolfBallController : MonoBehaviour
 
                 // --- ACHIEVEMENT: I Can See My House! (High Altitude) ---
                 // We check this after the ball stops to see if you landed really high up
-                if (transform.position.y >= 50f)
+                if (transform.position.y >= 50f && AchievementManager.Instance != null)
                 {
                     AchievementManager.Instance.UnlockAchievement("HIGH_ALTITUDE");
                 }
@@ -110,7 +110,7 @@ public class GolfBallController : MonoBehaviour
         // Temporarily print the impact speed to the console
         Debug.Log($"IMPACT FORCE: {verticalImpact}");
 
-        if (verticalImpact >= 30f)
+        if (verticalImpact >= 30f && AchievementManager.Instance != null)
         {
             AchievementManager.Instance.UnlockAchievement("HARD_BOUNCE");
         }

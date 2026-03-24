@@ -180,7 +180,7 @@ public class GameManager : MonoBehaviour
         int seconds = Mathf.FloorToInt(elapsedTime % 60f);
         hudText.text = $"Strokes: {strokeCount}  |  {minutes:00}:{seconds:00}";
 
-        if (elapsedTime >= 1800f)
+        if (elapsedTime >= 1800f && AchievementManager.Instance != null)
         {
             AchievementManager.Instance.UnlockAchievement("TIME_SINK");
         }
@@ -479,7 +479,7 @@ public class GameManager : MonoBehaviour
         {
             AchievementManager.Instance.UnlockAchievement("FIRST_SWING");
         }
-        else if (strokeCount == 100)
+        else if (strokeCount == 100 && AchievementManager.Instance != null)
         {
             AchievementManager.Instance.UnlockAchievement("CENTURY_CLUB");
         }

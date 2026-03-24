@@ -20,7 +20,7 @@ public class FinishFloorWin : MonoBehaviour
         _stayTimer += Time.deltaTime;
         Debug.Log($"[FinishFloor] Ball on floor. Timer: {_stayTimer:0.00}/{requiredStayTime}");
 
-        if (_stayTimer >= requiredStayTime)
+        if (_stayTimer >= requiredStayTime )
         {
             Debug.Log("[FinishFloor] WIN CONDITION MET — Attempting to enable WinUI.");
 
