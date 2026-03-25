@@ -84,6 +84,8 @@ public class CameraController : MonoBehaviour
     private CinemachineCamera activeCam;
     private CinemachinePositionComposer composer;
 
+    public bool IsManualMoving() => isManual;
+
     private enum BlendTrigger { Standard, Landing }
 
     private struct BlendState

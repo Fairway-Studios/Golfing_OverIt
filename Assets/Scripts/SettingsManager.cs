@@ -25,6 +25,9 @@ public class SettingsPanel : MonoBehaviour
     [SerializeField] private Slider redSatSlider;
     [SerializeField] private Slider redOpacitySlider;
 
+    [Header("Audio UI")]
+    [SerializeField] private Slider masterVolumeSlider;
+
     public void SetBlueHue(float value) => blueSettings.SetHue(value);
     public void SetBlueSaturation(float value) => blueSettings.SetSaturation(value);
     public void SetBlueOpacity(float value) => blueSettings.SetOpacity(value);
@@ -32,6 +35,12 @@ public class SettingsPanel : MonoBehaviour
     public void SetRedHue(float value) => redSettings.SetHue(value);
     public void SetRedSaturation(float value) => redSettings.SetSaturation(value);
     public void SetRedOpacity(float value) => redSettings.SetOpacity(value);
+
+    public void SetMasterVolume(float value)
+    {
+        if (SFXManager.Instance != null)
+            SFXManager.Instance.SetMasterVolume(value);
+    }
 
     void OnEnable()
     {
@@ -54,5 +63,17 @@ public class SettingsPanel : MonoBehaviour
         redHueSlider.SetValueWithoutNotify(redSettings.HueShift);
         redSatSlider.SetValueWithoutNotify(redSettings.SaturationShift);
         redOpacitySlider.SetValueWithoutNotify(redSettings.OpacityMultiplier);
+
+        masterVolumeSlider.onValueChanged.RemoveAllListeners();
+
+        float savedVolume = PlayerPrefs.GetFloat("MasterVolume", 1f);
+        masterVolumeSlider.SetValueWithoutNotify(savedVolume);
+
+        masterVolumeSlider.onValueChanged.AddListener(delegate {
+            if (SFXManager.Instance != null)
+            {
+                SFXManager.Instance.SetMasterVolume(masterVolumeSlider.value);
+            }
+        });
     }
 }

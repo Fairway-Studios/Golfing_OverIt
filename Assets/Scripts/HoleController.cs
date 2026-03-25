@@ -154,6 +154,7 @@ public class HoleController : MonoBehaviour
     {
         if (gameOverPanel == null) return;
 
+        Cursor.visible = true;
         gameOverPanel.SetActive(true);
     }
 }

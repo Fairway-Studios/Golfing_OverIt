@@ -11,6 +11,9 @@ public class SFXManager : MonoBehaviour
     public AudioSource sfxSource;
     public AudioSource ambienceSource;
 
+    [Header("Volumes (Runtime)")]
+    [Range(0f, 1f)] public float masterVolume = 1f;
+
     [Header("UI Sounds")]
     public AudioClip hoverSound;
     public AudioClip clickSound;
@@ -31,6 +34,9 @@ public class SFXManager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
+
+        LoadVolumes();
+        ApplyVolumes();
 
         // Start ambience
         if (birdsChirping != null && ambienceSource != null)
@@ -55,6 +61,7 @@ public class SFXManager : MonoBehaviour
     {
         eventSystem = EventSystem.current;
         HookButtons();
+        ApplyVolumes();
     }
 
     void HookButtons()
@@ -99,12 +106,44 @@ public class SFXManager : MonoBehaviour
         }
     }
 
+    void LoadVolumes()
+    {
+        masterVolume = PlayerPrefs.GetFloat("MasterVolume", 1f);
+    }
+
+    void ApplyVolumes()
+    {
+        if (sfxSource != null)
+            sfxSource.volume = masterVolume;
+
+        if (ambienceSource != null)
+            ambienceSource.volume = masterVolume;
+    }
+
+    public void PlaySFX(AudioClip clip)
+    {
+        if (clip == null || sfxSource == null) return;
+        sfxSource.PlayOneShot(clip, 1f);
+    }
+
+    float GetFinalSFXVolume(float baseVolume = 1f)
+    {
+        return baseVolume * masterVolume;
+    }
+
+    public void SetMasterVolume(float value)
+    {
+        masterVolume = value;
+        PlayerPrefs.SetFloat("MasterVolume", value);
+        ApplyVolumes();
+    }
+
     public void PlayHover()
     {
         if (hoverSound == null || sfxSource == null)
             return;
 
-        sfxSource.PlayOneShot(hoverSound, 0.3f);
+        sfxSource.PlayOneShot(hoverSound, GetFinalSFXVolume(0.3f));
     }
 
     public void PlayClick()
@@ -112,15 +151,7 @@ public class SFXManager : MonoBehaviour
         if (clickSound == null || sfxSource == null)
             return;
 
-        sfxSource.PlayOneShot(clickSound, 1f);
-    }
-
-    public void PlaySFX(AudioClip clip)
-    {
-        if (clip == null || sfxSource == null)
-            return;
-
-        sfxSource.PlayOneShot(clip);
+        sfxSource.PlayOneShot(clickSound, GetFinalSFXVolume());
     }
 
     class UIHoverForwarder : MonoBehaviour, IPointerEnterHandler

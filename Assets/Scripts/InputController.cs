@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Users;
 using UnityEngine.SceneManagement;
 
 [RequireComponent(typeof(Rigidbody2D))]
@@ -63,6 +64,10 @@ public class InputController : MonoBehaviour
 
     private bool anaglyphApplied = false;
 
+    private const int SWING_GAMEPAD_BINDING = 1;
+    private const int MOVECAMERA_GAMEPAD_BINDING = 0;
+
+
     private string sceneName => SceneManager.GetActiveScene().name;
 
     void Awake()
@@ -78,18 +83,48 @@ public class InputController : MonoBehaviour
         if (availableClubs != null && availableClubs.Length > 0)
         {
             currentClub = availableClubs[currentClubIndex];
-
             if (feedbackText != null)
                 feedbackText.text = "Current Club: " + currentClub.clubName;
         }
 
         BuildPrefKeys();
         LoadFromPrefs();
+
+        InputUser.onChange += OnInputUserChange;
     }
 
     void Start()
     {
+        Cursor.lockState = CursorLockMode.Confined;
+        Cursor.visible = false;
         previousPosition = rb.position;
+    }
+
+    void OnDestroy()
+    {
+        InputUser.onChange -= OnInputUserChange;
+    }
+
+    private void OnInputUserChange(InputUser user, InputUserChange change, InputDevice device)
+    {
+        if (playerInput == null || user != playerInput.user)
+            return;
+
+        switch (change)
+        {
+            case InputUserChange.DeviceLost:
+                moveInput = Vector2.zero;
+                rb.linearVelocity = Vector2.zero;
+                rb.angularVelocity = 0f;
+
+                Debug.Log($"[InputController P{playerIndex}] Controller disconnected.");
+
+                break;
+
+            case InputUserChange.DeviceRegained:
+                Debug.Log($"[InputController P{playerIndex}] Controller reconnected – restoring overrides.");
+                break;
+        }
     }
 
     private void BuildPrefKeys()
@@ -135,11 +170,10 @@ public class InputController : MonoBehaviour
         swing.RemoveAllBindingOverrides();
         cam.RemoveAllBindingOverrides();
 
-        if (!swap)
-            return;
+        if (!swap) return;
 
-        swing.ApplyBindingOverride("<Gamepad>/rightStick");
-        cam.ApplyBindingOverride("<Gamepad>/leftStick");
+        swing.ApplyBindingOverride(SWING_GAMEPAD_BINDING, "<Gamepad>/rightStick");
+        cam.ApplyBindingOverride(MOVECAMERA_GAMEPAD_BINDING, "<Gamepad>/leftStick");
     }
 
     void RefreshBallList()
@@ -154,14 +188,10 @@ public class InputController : MonoBehaviour
 
     public void OnCycleClub(InputAction.CallbackContext context)
     {
-        if (!context.performed)
-            return;
-
-        if (availableClubs == null || availableClubs.Length == 0)
-            return;
+        if (sceneManager.IsGamePaused() || !context.performed) return;
+        if (availableClubs == null || availableClubs.Length == 0) return;
 
         SFXManager.Instance.PlaySFX(swapClubsSFX);
-
         currentClubIndex = (currentClubIndex + 1) % availableClubs.Length;
         currentClub = availableClubs[currentClubIndex];
 
@@ -171,14 +201,17 @@ public class InputController : MonoBehaviour
 
     public void OnCycleCamTarget(InputAction.CallbackContext context)
     {
-        if (cameraController != null && context.performed && gameManager.IsMultiplayer() == true)
+        if (sceneManager.IsGamePaused()) return;
+
+        if (cameraController != null && context.performed && gameManager.IsMultiplayer())
             cameraController.CycleTargetBall();
     }
 
     public void OnInvertCamX(InputAction.CallbackContext context)
     {
-        Debug.Log("Invert Cam X triggered");
+        if (sceneManager.IsGamePaused()) return;
 
+        Debug.Log("Invert Cam X triggered");
         if (cameraController != null && context.performed)
             cameraController.SwapHorizontalBias();
     }
@@ -191,6 +224,8 @@ public class InputController : MonoBehaviour
 
     public void OnSelectBallA(InputAction.CallbackContext context)
     {
+        if (sceneManager.IsGamePaused()) return;
+
         bool held = context.phase == InputActionPhase.Performed;
         if (gameManager == null) return;
         if (playerIndex == 0) gameManager.OnPlayer1VoteA(held);
@@ -199,6 +234,8 @@ public class InputController : MonoBehaviour
 
     public void OnSelectBallB(InputAction.CallbackContext context)
     {
+        if (sceneManager.IsGamePaused()) return;
+
         bool held = context.phase == InputActionPhase.Performed;
         if (gameManager == null) return;
         if (playerIndex == 0) gameManager.OnPlayer1VoteB(held);
@@ -269,23 +306,24 @@ public class InputController : MonoBehaviour
 
     void UpdateSwingState()
     {
-        if (!canSwing)
+        if (canSwing) return;
+
+        foreach (var ball in allBalls)
         {
-            foreach (var ball in allBalls)
+            if (ball == null) continue;
+            if (ball.GetOwnerIndex() != playerIndex) continue;
+            if (Vector2.Distance(rb.position, ball.transform.position) > readyDistance)
             {
-                if (ball == null) continue;
-                if (ball.GetOwnerIndex() != playerIndex) continue;
-                if (Vector2.Distance(rb.position, ball.transform.position) > readyDistance)
-                {
-                    canSwing = true;
-                    break;
-                }
+                canSwing = true;
+                break;
             }
         }
     }
 
     void CheckBallHit(Vector2 clubVelocity)
     {
+        if (cameraController != null && cameraController.IsManualMoving()) return;
+
         foreach (var ball in allBalls)
         {
             if (ball == null) continue;
@@ -390,9 +428,6 @@ public class InputController : MonoBehaviour
 
     public int GetPlayerIndex() => playerIndex;
 
-
-
-    //gravity flip methods
     public void SetLockedPosition(Vector2 newPosition)
     {
         lockedPosition = newPosition;
