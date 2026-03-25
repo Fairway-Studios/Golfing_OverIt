@@ -218,6 +218,8 @@ public class InputController : MonoBehaviour
 
     public void OnMoveCamera(InputAction.CallbackContext context)
     {
+        if (sceneManager.IsGamePaused()) return;
+
         if (cameraController != null)
             cameraController.OnCameraMove(context.ReadValue<Vector2>());
     }
