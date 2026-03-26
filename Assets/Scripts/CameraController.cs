@@ -378,7 +378,10 @@ public class CameraController : MonoBehaviour
         else if (playerIndex == 1) player2HasSwung = true;
 
         if (player1HasSwung && player2HasSwung)
+        {
             isWaitingForSwings = false;
+            SetBall(lastHitBall.transform);
+        }
     }
 
     public void CycleTargetBall()
