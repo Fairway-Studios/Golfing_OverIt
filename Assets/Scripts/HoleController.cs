@@ -108,6 +108,9 @@ public class HoleController : MonoBehaviour
 
         ball.gameObject.SetActive(false);
 
+        // --- ACHIEVEMENT: Level Complete ---
+        AchievementManager.Instance.UnlockAchievement("LEVEL_COMPLETE");
+
         yield return new WaitForSeconds(gameOverDelay);
 
         ShowGameOverUI(ball.GetOwnerIndex());
