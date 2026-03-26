@@ -11,10 +11,10 @@ public class HoleController : MonoBehaviour
 
     [Header("Game Over UI")]
     [SerializeField] private GameObject gameOverPanel;
-    [SerializeField] private float gameOverDelay = 1.8f;
+    [SerializeField] private float gameOverDelay = 3f;
 
     [Header("Sink Probability Thresholds")]
-    [SerializeField] private float guaranteedSinkSpeed = 1.5f;
+    [SerializeField] private float guaranteedSinkSpeed = 2f;
     [SerializeField] private float impossibleSinkSpeed = 12f;
 
     [SerializeField] private int impossibleRangeMax = 20;
