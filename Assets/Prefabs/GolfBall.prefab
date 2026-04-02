@@ -171,7 +171,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ownerPlayerIndex: 0
   stoppedVelocityThreshold: 0.5
-  stoppedCheckDuration: 2
+  stoppedCheckDuration: 1
   bounceParticles: {fileID: 8833073715719791129}
   bounceAudio: {fileID: 990746389939563667}
   bounceSoundClip: {fileID: 8300000, guid: 3dfa3770eeebad148a78988deeb1b657, type: 3}
