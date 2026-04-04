@@ -64,7 +64,7 @@ public class AchievementPopupUI : MonoBehaviour
             AudioClip clipToPlay = nextData.unlockSound != null ? nextData.unlockSound : defaultUnlockSound;
             if (clipToPlay != null && audioSource != null)
             {
-                audioSource.PlayOneShot(clipToPlay);
+                audioSource.PlayOneShot(clipToPlay, 0.25f);
             }
 
             // 4. Slide Down (Using Distance to prevent math stalls)
