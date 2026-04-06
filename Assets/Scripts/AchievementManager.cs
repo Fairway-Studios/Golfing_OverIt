@@ -7,10 +7,10 @@ public class AchievementManager : MonoBehaviour
 
     [Header("References")]
     [SerializeField] private AchievementPopupUI popupUI;
-    [SerializeField] private List<AchievementData> allAchievements;
 
-    // Track unlocked IDs to prevent duplicates
-    private HashSet<string> unlockedIDs = new HashSet<string>();
+    public List<AchievementData> allAchievements;
+
+    public HashSet<string> unlockedIDs = new HashSet<string>();
 
     private void Awake()
     {
@@ -18,6 +18,7 @@ public class AchievementManager : MonoBehaviour
         if (Instance == null) { Instance = this; }
         else { Destroy(gameObject); }
 
+        // once you are done testing, or your game will wipe saves on every boot!
         PlayerPrefs.DeleteKey("UnlockedAchievements");
 
         LoadUnlockedAchievements();

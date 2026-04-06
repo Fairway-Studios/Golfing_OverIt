@@ -1069,7 +1069,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -1490,7 +1490,7 @@ VideoPlayer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1930654169}
   m_Enabled: 1
-  m_VideoClip: {fileID: 32900000, guid: 4a57092f4fdeb37468127f7c1ea803ee, type: 3}
+  m_VideoClip: {fileID: 32900000, guid: 1cc958341690e7d48ac1846567c2a02e, type: 3}
   m_TargetCameraAlpha: 1
   m_TargetCamera3DLayout: 0
   m_TargetCamera: {fileID: 0}
@@ -1502,7 +1502,7 @@ VideoPlayer:
   m_AspectRatio: 2
   m_DataSource: 0
   m_TimeUpdateMode: 2
-  m_PlaybackSpeed: 0.1
+  m_PlaybackSpeed: 0.01
   m_AudioOutputMode: 0
   m_TargetAudioSources:
   - {fileID: 0}
@@ -1954,6 +1954,10 @@ PrefabInstance:
       propertyPath: m_text
       value: SINGLEPLAYER
       objectReference: {fileID: 0}
+    - target: {fileID: 4560831410148936268, guid: 003c74d9facee284db07da88623dcf46, type: 3}
+      propertyPath: m_fontStyle
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4670819305449127662, guid: 003c74d9facee284db07da88623dcf46, type: 3}
       propertyPath: m_Enabled
       value: 0
@@ -2046,6 +2050,10 @@ PrefabInstance:
       propertyPath: m_text
       value: MULTIPLAYER
       objectReference: {fileID: 0}
+    - target: {fileID: 8010537666333857907, guid: 003c74d9facee284db07da88623dcf46, type: 3}
+      propertyPath: m_fontStyle
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8176381286037585385, guid: 003c74d9facee284db07da88623dcf46, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -2101,6 +2109,14 @@ PrefabInstance:
     - target: {fileID: 8620933661481792927, guid: 003c74d9facee284db07da88623dcf46, type: 3}
       propertyPath: m_text
       value: ACHIEVEMENTS
+      objectReference: {fileID: 0}
+    - target: {fileID: 8620933661481792927, guid: 003c74d9facee284db07da88623dcf46, type: 3}
+      propertyPath: m_fontStyle
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8919254648738147753, guid: 003c74d9facee284db07da88623dcf46, type: 3}
+      propertyPath: m_Name
+      value: PlayerAchvmntBTN
       objectReference: {fileID: 0}
     - target: {fileID: 9109313924198112676, guid: 003c74d9facee284db07da88623dcf46, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
