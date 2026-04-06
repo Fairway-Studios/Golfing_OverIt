@@ -73,7 +73,14 @@ public class ObstaclePlacement2D : MonoBehaviour
     [SerializeField] private float sharedSafeStepDistance = 0.2f;
     [SerializeField] private int sharedSafeMaxSteps = 24;
     [SerializeField] private float sharedSafeClearance = 0.08f;
-    [SerializeField] private float sharedSafeEmergencyUpDistance = 8f;
+
+    [Header("Teleport Terrain Safety (Multiplayer Only)")]
+    [SerializeField] private float maxSafeSurfaceAngleDeg = 22f;
+    [SerializeField] private float nearGroundCheckHalfWidth = 0.35f;
+    [SerializeField] private float farGroundCheckHalfWidth = 0.9f;
+    [SerializeField] private float maxNearGroundHeightDifference = 0.3f;
+    [SerializeField] private float maxFarGroundHeightDifference = 0.75f;
+    [SerializeField] private float valleyTrapDepthTolerance = 0.55f;
 
     readonly List<GameObject> _spawned = new();
     readonly List<ObstacleBallCollision2D> _spawnedCollisionControllers = new();
@@ -82,12 +89,10 @@ public class ObstaclePlacement2D : MonoBehaviour
     private GolfBallController blueBall;
     private GolfBallController redBall;
 
-    /// <summary>
-    /// Call this from your terrain generator once you have the mountain surface.
-    /// Surface points are in generator-local space.
-    /// </summary>
-    /// 
-
+    private List<Vector3> _cachedSurfaceLocal;
+    private Transform _cachedGeneratorTransform;
+    private float _cachedSurfaceMinX;
+    private float _cachedSurfaceMaxX;
 
     void Update()
     {
@@ -110,6 +115,8 @@ public class ObstaclePlacement2D : MonoBehaviour
         if (surfaceLocal == null || surfaceLocal.Count < 2) return;
         if (obstaclesPerMountain <= 0) return;
         if (generatorTransform == null) return;
+
+        CacheSurfaceData(surfaceLocal, generatorTransform);
 
         EnsureRoot(generatorTransform);
         FindBallsByOwnerIndex();
@@ -171,15 +178,43 @@ public class ObstaclePlacement2D : MonoBehaviour
                 }
                 else
                 {
-                    // Singleplayer, or missing anaglyph settings on the terrain generator:
-                    // disable the obstacle's anaglyph rendering controller completely.
                     SetObstacleAnaglyphControllerEnabled(obj, false);
-                    foreach (var r in obj.GetComponentsInChildren<SpriteRenderer>(true)) r.color = Color.white;
-
+                    foreach (var r in obj.GetComponentsInChildren<SpriteRenderer>(true))
+                        r.color = Color.white;
                 }
 
                 _spawned.Add(obj);
                 break;
+            }
+        }
+    }
+
+    void CacheSurfaceData(List<Vector3> surfaceLocal, Transform generatorTransform)
+    {
+        _cachedGeneratorTransform = generatorTransform;
+
+        if (surfaceLocal == null)
+        {
+            _cachedSurfaceLocal = null;
+            _cachedSurfaceMinX = 0f;
+            _cachedSurfaceMaxX = 0f;
+            return;
+        }
+
+        _cachedSurfaceLocal = new List<Vector3>(surfaceLocal);
+
+        if (_cachedSurfaceLocal.Count > 0)
+        {
+            _cachedSurfaceMinX = _cachedSurfaceLocal[0].x;
+            _cachedSurfaceMaxX = _cachedSurfaceLocal[0].x;
+
+            for (int i = 1; i < _cachedSurfaceLocal.Count; i++)
+            {
+                if (_cachedSurfaceLocal[i].x < _cachedSurfaceMinX)
+                    _cachedSurfaceMinX = _cachedSurfaceLocal[i].x;
+
+                if (_cachedSurfaceLocal[i].x > _cachedSurfaceMaxX)
+                    _cachedSurfaceMaxX = _cachedSurfaceLocal[i].x;
             }
         }
     }
@@ -239,7 +274,6 @@ public class ObstaclePlacement2D : MonoBehaviour
 
         if (colorSettingsField == null) return;
 
-        // Unsubscribe from whatever settings object it had before
         MethodInfo onDisableMethod = typeof(AnaglyphRenderingController).GetMethod(
             "OnDisable",
             BindingFlags.Instance | BindingFlags.NonPublic
@@ -248,10 +282,8 @@ public class ObstaclePlacement2D : MonoBehaviour
         if (onDisableMethod != null)
             onDisableMethod.Invoke(controller, null);
 
-        // Assign the correct runtime settings object
         colorSettingsField.SetValue(controller, chosenSettings);
 
-        // Only recache once when the obstacle is first created
         if (recacheOriginals)
         {
             MethodInfo cacheRenderersMethod = typeof(AnaglyphRenderingController).GetMethod(
@@ -263,7 +295,6 @@ public class ObstaclePlacement2D : MonoBehaviour
                 cacheRenderersMethod.Invoke(controller, null);
         }
 
-        // Subscribe again, now to the NEW settings object
         MethodInfo onEnableMethod = typeof(AnaglyphRenderingController).GetMethod(
             "OnEnable",
             BindingFlags.Instance | BindingFlags.NonPublic
@@ -291,7 +322,8 @@ public class ObstaclePlacement2D : MonoBehaviour
             if (!useObstacleAnaglyphMode)
             {
                 SetObstacleAnaglyphControllerEnabled(obj, false);
-                foreach (var r in obj.GetComponentsInChildren<SpriteRenderer>(true)) r.color = Color.white;
+                foreach (var r in obj.GetComponentsInChildren<SpriteRenderer>(true))
+                    r.color = Color.white;
                 continue;
             }
 
@@ -341,71 +373,48 @@ public class ObstaclePlacement2D : MonoBehaviour
 
     /// <summary>
     /// Multiplayer best-ball teleport safety.
-    /// In singleplayer, this simply returns the original position.
+    /// Finds the nearest nearby playable surface spot instead of doing a big skip.
     /// </summary>
     public Vector3 ResolveSharedSafeBallPosition(Vector3 desiredPos)
     {
         if (blueBall == null || redBall == null)
             return desiredPos;
 
-        if (_spawnedCollisionControllers.Count == 0)
+        if (_cachedSurfaceLocal == null || _cachedSurfaceLocal.Count < 2 || _cachedGeneratorTransform == null)
             return desiredPos;
 
-        // 1. Best case: desired position is already safe
-        if (IsSharedBallPositionSafe(desiredPos))
-            return desiredPos;
+        Vector3 snappedDesired = BuildSurfaceCandidateFromWorldX(desiredPos.x);
 
-        // 2. Search left/right first
+        if (IsSharedBallPositionSafe(snappedDesired))
+            return snappedDesired;
+
         for (int i = 1; i <= sharedSafeMaxSteps; i++)
         {
             float dist = sharedSafeStepDistance * i;
 
-            Vector3 left = desiredPos + Vector3.left * dist;
-            if (IsSharedBallPositionSafe(left))
-                return left;
+            Vector3 leftCandidate = BuildSurfaceCandidateFromWorldX(desiredPos.x - dist);
+            if (IsSharedBallPositionSafe(leftCandidate))
+                return leftCandidate;
 
-            Vector3 right = desiredPos + Vector3.right * dist;
-            if (IsSharedBallPositionSafe(right))
-                return right;
+            Vector3 rightCandidate = BuildSurfaceCandidateFromWorldX(desiredPos.x + dist);
+            if (IsSharedBallPositionSafe(rightCandidate))
+                return rightCandidate;
         }
 
-        // 3. Search upward
-        for (int i = 1; i <= sharedSafeMaxSteps; i++)
-        {
-            Vector3 up = desiredPos + Vector3.up * (sharedSafeStepDistance * i);
-            if (IsSharedBallPositionSafe(up))
-                return up;
-        }
+        return snappedDesired;
+    }
 
-        // 4. Search diagonally upward too
-        for (int i = 1; i <= sharedSafeMaxSteps; i++)
-        {
-            float dist = sharedSafeStepDistance * i;
+    Vector3 BuildSurfaceCandidateFromWorldX(float worldX)
+    {
+        if (_cachedSurfaceLocal == null || _cachedSurfaceLocal.Count < 2 || _cachedGeneratorTransform == null)
+            return new Vector3(worldX, 0f, 0f);
 
-            Vector3 upLeft = desiredPos + new Vector3(-dist, dist, 0f);
-            if (IsSharedBallPositionSafe(upLeft))
-                return upLeft;
+        Vector3 localFromWorld = _cachedGeneratorTransform.InverseTransformPoint(new Vector3(worldX, 0f, 0f));
+        float clampedLocalX = Mathf.Clamp(localFromWorld.x, _cachedSurfaceMinX, _cachedSurfaceMaxX);
+        float localY = SampleSurfaceY_Local(_cachedSurfaceLocal, clampedLocalX);
 
-            Vector3 upRight = desiredPos + new Vector3(dist, dist, 0f);
-            if (IsSharedBallPositionSafe(upRight))
-                return upRight;
-        }
-
-        // 5. Emergency forced upward fallback
-        Vector3 forcedUp = desiredPos + Vector3.up * sharedSafeEmergencyUpDistance;
-        if (IsSharedBallPositionSafe(forcedUp))
-            return forcedUp;
-
-        // 6. Final fallback: keep pushing higher until something is safe
-        for (int i = 1; i <= sharedSafeMaxSteps * 10; i++)
-        {
-            Vector3 highUp = desiredPos + Vector3.up * (sharedSafeStepDistance * i);
-            if (IsSharedBallPositionSafe(highUp))
-                return highUp;
-        }
-
-        Debug.LogError("[ObstaclePlacement2D] No safe shared ball teleport position found. Returning a high emergency fallback.");
-        return desiredPos + Vector3.up * sharedSafeEmergencyUpDistance;
+        Vector3 localCandidate = new Vector3(clampedLocalX, localY + yOffset, 0f);
+        return _cachedGeneratorTransform.TransformPoint(localCandidate);
     }
 
     bool IsSharedBallPositionSafe(Vector3 testPos)
@@ -421,6 +430,61 @@ public class ObstaclePlacement2D : MonoBehaviour
             if (controller.IsPositionBlockedForBlockingBall(testPos, sharedSafeClearance))
                 return false;
         }
+
+        if (!HasPlayableGroundAt(testPos))
+            return false;
+
+        return true;
+    }
+
+    bool HasPlayableGroundAt(Vector3 worldPos)
+    {
+        if (_cachedSurfaceLocal == null || _cachedSurfaceLocal.Count < 2 || _cachedGeneratorTransform == null)
+            return true;
+
+        Vector3 localPos = _cachedGeneratorTransform.InverseTransformPoint(worldPos);
+
+        float centerX = Mathf.Clamp(localPos.x, _cachedSurfaceMinX, _cachedSurfaceMaxX);
+
+        float nearLeftX = Mathf.Clamp(centerX - nearGroundCheckHalfWidth, _cachedSurfaceMinX, _cachedSurfaceMaxX);
+        float nearRightX = Mathf.Clamp(centerX + nearGroundCheckHalfWidth, _cachedSurfaceMinX, _cachedSurfaceMaxX);
+
+        float farLeftX = Mathf.Clamp(centerX - farGroundCheckHalfWidth, _cachedSurfaceMinX, _cachedSurfaceMaxX);
+        float farRightX = Mathf.Clamp(centerX + farGroundCheckHalfWidth, _cachedSurfaceMinX, _cachedSurfaceMaxX);
+
+        float centerY = SampleSurfaceY_Local(_cachedSurfaceLocal, centerX);
+        float nearLeftY = SampleSurfaceY_Local(_cachedSurfaceLocal, nearLeftX);
+        float nearRightY = SampleSurfaceY_Local(_cachedSurfaceLocal, nearRightX);
+        float farLeftY = SampleSurfaceY_Local(_cachedSurfaceLocal, farLeftX);
+        float farRightY = SampleSurfaceY_Local(_cachedSurfaceLocal, farRightX);
+
+        float centerAngle = Mathf.Abs(SampleSurfaceAngleDeg_Local(_cachedSurfaceLocal, centerX));
+        if (centerAngle > maxSafeSurfaceAngleDeg)
+            return false;
+
+        if (Mathf.Abs(centerY - nearLeftY) > maxNearGroundHeightDifference)
+            return false;
+
+        if (Mathf.Abs(centerY - nearRightY) > maxNearGroundHeightDifference)
+            return false;
+
+        if (Mathf.Abs(nearLeftY - nearRightY) > maxNearGroundHeightDifference)
+            return false;
+
+        if (Mathf.Abs(centerY - farLeftY) > maxFarGroundHeightDifference)
+            return false;
+
+        if (Mathf.Abs(centerY - farRightY) > maxFarGroundHeightDifference)
+            return false;
+
+        bool isDeepValleyTrap =
+            (nearLeftY - centerY) > valleyTrapDepthTolerance &&
+            (nearRightY - centerY) > valleyTrapDepthTolerance &&
+            (farLeftY - centerY) > valleyTrapDepthTolerance &&
+            (farRightY - centerY) > valleyTrapDepthTolerance;
+
+        if (isDeepValleyTrap)
+            return false;
 
         return true;
     }
@@ -545,7 +609,6 @@ public class ObstaclePlacement2D : MonoBehaviour
         return 0f;
     }
 
-
     void SetObstacleAnaglyphControllerEnabled(GameObject obj, bool enabled)
     {
         if (obj == null) return;
@@ -555,7 +618,6 @@ public class ObstaclePlacement2D : MonoBehaviour
 
         if (!enabled)
         {
-            // Make sure it unsubscribes before disabling
             MethodInfo onDisableMethod = typeof(AnaglyphRenderingController).GetMethod(
                 "OnDisable",
                 BindingFlags.Instance | BindingFlags.NonPublic
