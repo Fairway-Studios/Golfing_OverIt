@@ -73,6 +73,7 @@ public class ObstaclePlacement2D : MonoBehaviour
     [SerializeField] private float sharedSafeStepDistance = 0.2f;
     [SerializeField] private int sharedSafeMaxSteps = 24;
     [SerializeField] private float sharedSafeClearance = 0.08f;
+    [SerializeField] private float sharedSafeEmergencyUpDistance = 8f;
 
     readonly List<GameObject> _spawned = new();
     readonly List<ObstacleBallCollision2D> _spawnedCollisionControllers = new();
@@ -350,10 +351,11 @@ public class ObstaclePlacement2D : MonoBehaviour
         if (_spawnedCollisionControllers.Count == 0)
             return desiredPos;
 
+        // 1. Best case: desired position is already safe
         if (IsSharedBallPositionSafe(desiredPos))
             return desiredPos;
 
-        // Try left/right first
+        // 2. Search left/right first
         for (int i = 1; i <= sharedSafeMaxSteps; i++)
         {
             float dist = sharedSafeStepDistance * i;
@@ -367,7 +369,7 @@ public class ObstaclePlacement2D : MonoBehaviour
                 return right;
         }
 
-        // Then upward
+        // 3. Search upward
         for (int i = 1; i <= sharedSafeMaxSteps; i++)
         {
             Vector3 up = desiredPos + Vector3.up * (sharedSafeStepDistance * i);
@@ -375,7 +377,35 @@ public class ObstaclePlacement2D : MonoBehaviour
                 return up;
         }
 
-        return desiredPos;
+        // 4. Search diagonally upward too
+        for (int i = 1; i <= sharedSafeMaxSteps; i++)
+        {
+            float dist = sharedSafeStepDistance * i;
+
+            Vector3 upLeft = desiredPos + new Vector3(-dist, dist, 0f);
+            if (IsSharedBallPositionSafe(upLeft))
+                return upLeft;
+
+            Vector3 upRight = desiredPos + new Vector3(dist, dist, 0f);
+            if (IsSharedBallPositionSafe(upRight))
+                return upRight;
+        }
+
+        // 5. Emergency forced upward fallback
+        Vector3 forcedUp = desiredPos + Vector3.up * sharedSafeEmergencyUpDistance;
+        if (IsSharedBallPositionSafe(forcedUp))
+            return forcedUp;
+
+        // 6. Final fallback: keep pushing higher until something is safe
+        for (int i = 1; i <= sharedSafeMaxSteps * 10; i++)
+        {
+            Vector3 highUp = desiredPos + Vector3.up * (sharedSafeStepDistance * i);
+            if (IsSharedBallPositionSafe(highUp))
+                return highUp;
+        }
+
+        Debug.LogError("[ObstaclePlacement2D] No safe shared ball teleport position found. Returning a high emergency fallback.");
+        return desiredPos + Vector3.up * sharedSafeEmergencyUpDistance;
     }
 
     bool IsSharedBallPositionSafe(Vector3 testPos)

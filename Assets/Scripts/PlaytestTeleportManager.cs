@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -5,6 +6,10 @@ public class PlaytestTeleportManager : MonoBehaviour
 {
     [Header("Spawn Points In Order")]
     [SerializeField] private Transform[] spawnPoints;
+
+    [Header("Optional Runtime Finish Teleport")]
+    [SerializeField] private string finishFlagObjectName = "Finish Flag";
+    [SerializeField] private string finishTeleportChildName = "FinishTeleport";
 
     [Header("Ball References")]
     [SerializeField] private Rigidbody2D ball1;
@@ -21,6 +26,8 @@ public class PlaytestTeleportManager : MonoBehaviour
     private Transform[] players;
     private Transform cameraTransform;
 
+    private List<Transform> runtimeSpawnPoints = new List<Transform>();
+
     private void Start()
     {
         gameManager = Object.FindFirstObjectByType<GameManager>();
@@ -31,6 +38,7 @@ public class PlaytestTeleportManager : MonoBehaviour
 
         FindPlayers();
         FindBalls();
+        BuildRuntimeSpawnList();
     }
 
     private void FindPlayers()
@@ -72,9 +80,99 @@ public class PlaytestTeleportManager : MonoBehaviour
             ball2 = balls[1].GetComponent<Rigidbody2D>();
     }
 
+    private void BuildRuntimeSpawnList()
+    {
+        runtimeSpawnPoints.Clear();
+
+        if (spawnPoints != null)
+        {
+            for (int i = 0; i < spawnPoints.Length; i++)
+            {
+                if (spawnPoints[i] != null)
+                    runtimeSpawnPoints.Add(spawnPoints[i]);
+            }
+        }
+
+        GameObject finishFlag = GameObject.Find(finishFlagObjectName);
+        if (finishFlag != null)
+        {
+            Transform finishTeleport = FindChildRecursive(finishFlag.transform, finishTeleportChildName);
+            if (finishTeleport != null)
+            {
+                runtimeSpawnPoints.Add(finishTeleport);
+                Debug.Log("[PlaytestTeleportManager] Added FinishTeleport from Finish Flag to end of spawn list.");
+            }
+            else
+            {
+                Debug.LogWarning("[PlaytestTeleportManager] Finish Flag found, but child '" + finishTeleportChildName + "' was not found.");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[PlaytestTeleportManager] Could not find Finish Flag in scene.");
+        }
+
+        if (currentSpawnIndex >= runtimeSpawnPoints.Count)
+            currentSpawnIndex = 0;
+    }
+
+    private void RefreshRuntimeSpawnList()
+    {
+        bool needsRefresh = false;
+
+        if (runtimeSpawnPoints == null || runtimeSpawnPoints.Count == 0)
+        {
+            needsRefresh = true;
+        }
+        else
+        {
+            for (int i = runtimeSpawnPoints.Count - 1; i >= 0; i--)
+            {
+                if (runtimeSpawnPoints[i] == null)
+                {
+                    needsRefresh = true;
+                    break;
+                }
+            }
+        }
+
+        if (needsRefresh)
+        {
+            BuildRuntimeSpawnList();
+
+            if (runtimeSpawnPoints == null || runtimeSpawnPoints.Count == 0)
+                return;
+
+            if (currentSpawnIndex >= runtimeSpawnPoints.Count)
+                currentSpawnIndex = 0;
+        }
+    }
+
+    private Transform FindChildRecursive(Transform parent, string childName)
+    {
+        if (parent == null) return null;
+
+        if (parent.name == childName)
+            return parent;
+
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform result = FindChildRecursive(parent.GetChild(i), childName);
+            if (result != null)
+                return result;
+        }
+
+        return null;
+    }
+
     private void Update()
     {
-        if (spawnPoints == null || spawnPoints.Length == 0)
+        if (GravityFlipZone.IsGravityFlipped())
+            return;
+
+        RefreshRuntimeSpawnList();
+
+        if (runtimeSpawnPoints == null || runtimeSpawnPoints.Count == 0)
             return;
 
         bool shiftHeld = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
@@ -104,28 +202,69 @@ public class PlaytestTeleportManager : MonoBehaviour
 
     private void TeleportToNextSpawn()
     {
+        if (runtimeSpawnPoints == null || runtimeSpawnPoints.Count == 0)
+            return;
+
         currentSpawnIndex++;
 
-        if (currentSpawnIndex >= spawnPoints.Length)
+        if (currentSpawnIndex >= runtimeSpawnPoints.Count)
             currentSpawnIndex = 0;
 
-        TeleportToSpawn(spawnPoints[currentSpawnIndex].position);
+        if (runtimeSpawnPoints[currentSpawnIndex] == null)
+        {
+            RefreshRuntimeSpawnList();
+            if (runtimeSpawnPoints == null || runtimeSpawnPoints.Count == 0)
+                return;
+
+            if (currentSpawnIndex >= runtimeSpawnPoints.Count)
+                currentSpawnIndex = 0;
+
+            if (runtimeSpawnPoints[currentSpawnIndex] == null)
+                return;
+        }
+
+        TeleportToSpawn(runtimeSpawnPoints[currentSpawnIndex].position);
     }
 
     private void TeleportToPreviousSpawn()
     {
+        if (runtimeSpawnPoints == null || runtimeSpawnPoints.Count == 0)
+            return;
+
         currentSpawnIndex--;
 
         if (currentSpawnIndex < 0)
-            currentSpawnIndex = spawnPoints.Length - 1;
+            currentSpawnIndex = runtimeSpawnPoints.Count - 1;
 
-        TeleportToSpawn(spawnPoints[currentSpawnIndex].position);
+        if (runtimeSpawnPoints[currentSpawnIndex] == null)
+        {
+            RefreshRuntimeSpawnList();
+            if (runtimeSpawnPoints == null || runtimeSpawnPoints.Count == 0)
+                return;
+
+            if (currentSpawnIndex >= runtimeSpawnPoints.Count)
+                currentSpawnIndex = runtimeSpawnPoints.Count - 1;
+
+            if (currentSpawnIndex < 0 || runtimeSpawnPoints[currentSpawnIndex] == null)
+                return;
+        }
+
+        TeleportToSpawn(runtimeSpawnPoints[currentSpawnIndex].position);
     }
 
     private void TeleportToFirstSpawn()
     {
+        RefreshRuntimeSpawnList();
+
+        if (runtimeSpawnPoints == null || runtimeSpawnPoints.Count == 0)
+            return;
+
         currentSpawnIndex = 0;
-        TeleportToSpawn(spawnPoints[currentSpawnIndex].position);
+
+        if (runtimeSpawnPoints[currentSpawnIndex] == null)
+            return;
+
+        TeleportToSpawn(runtimeSpawnPoints[currentSpawnIndex].position);
     }
 
     private void TeleportToSpawn(Vector3 targetPosition)
