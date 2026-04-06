@@ -73,14 +73,13 @@ public class ObstaclePlacement2D : MonoBehaviour
     [SerializeField] private float sharedSafeStepDistance = 0.2f;
     [SerializeField] private int sharedSafeMaxSteps = 24;
     [SerializeField] private float sharedSafeClearance = 0.08f;
+    [SerializeField] private float sharedSafeEmergencyUpDistance = 8f;
 
     [Header("Teleport Terrain Safety (Multiplayer Only)")]
-    [SerializeField] private float maxSafeSurfaceAngleDeg = 22f;
-    [SerializeField] private float nearGroundCheckHalfWidth = 0.35f;
-    [SerializeField] private float farGroundCheckHalfWidth = 0.9f;
-    [SerializeField] private float maxNearGroundHeightDifference = 0.3f;
-    [SerializeField] private float maxFarGroundHeightDifference = 0.75f;
-    [SerializeField] private float valleyTrapDepthTolerance = 0.55f;
+    [SerializeField] private float maxSafeSurfaceAngleDeg = 18f;
+    [SerializeField] private float groundCheckHalfWidth = 0.75f;
+    [SerializeField] private float maxGroundHeightDifference = 0.35f;
+    [SerializeField] private float valleyTrapDepthTolerance = 0.2f;
 
     readonly List<GameObject> _spawned = new();
     readonly List<ObstacleBallCollision2D> _spawnedCollisionControllers = new();
@@ -373,63 +372,77 @@ public class ObstaclePlacement2D : MonoBehaviour
 
     /// <summary>
     /// Multiplayer best-ball teleport safety.
-    /// Finds the nearest nearby playable surface spot instead of doing a big skip.
+    /// In singleplayer, this simply returns the original position.
     /// </summary>
     public Vector3 ResolveSharedSafeBallPosition(Vector3 desiredPos)
     {
         if (blueBall == null || redBall == null)
             return desiredPos;
 
-        if (_cachedSurfaceLocal == null || _cachedSurfaceLocal.Count < 2 || _cachedGeneratorTransform == null)
+        if (_spawnedCollisionControllers.Count == 0)
             return desiredPos;
 
-        Vector3 snappedDesired = BuildSurfaceCandidateFromWorldX(desiredPos.x);
+        // 1. If the chosen spot is already safe, use it
+        if (IsSharedBallPositionSafe(desiredPos))
+            return desiredPos;
 
-        if (IsSharedBallPositionSafe(snappedDesired))
-            return snappedDesired;
-
+        // 2. Search left / right first
         for (int i = 1; i <= sharedSafeMaxSteps; i++)
         {
             float dist = sharedSafeStepDistance * i;
 
-            Vector3 leftCandidate = BuildSurfaceCandidateFromWorldX(desiredPos.x - dist);
-            if (IsSharedBallPositionSafe(leftCandidate))
-                return leftCandidate;
+            Vector3 left = desiredPos + Vector3.left * dist;
+            if (IsSharedBallPositionSafe(left))
+                return left;
 
-            Vector3 rightCandidate = BuildSurfaceCandidateFromWorldX(desiredPos.x + dist);
-            if (IsSharedBallPositionSafe(rightCandidate))
-                return rightCandidate;
+            Vector3 right = desiredPos + Vector3.right * dist;
+            if (IsSharedBallPositionSafe(right))
+                return right;
         }
 
-        return snappedDesired;
-    }
+        // 3. Search diagonally upward
+        for (int i = 1; i <= sharedSafeMaxSteps; i++)
+        {
+            float dist = sharedSafeStepDistance * i;
 
-    Vector3 BuildSurfaceCandidateFromWorldX(float worldX)
-    {
-        if (_cachedSurfaceLocal == null || _cachedSurfaceLocal.Count < 2 || _cachedGeneratorTransform == null)
-            return new Vector3(worldX, 0f, 0f);
+            Vector3 upLeft = desiredPos + new Vector3(-dist, dist, 0f);
+            if (IsSharedBallPositionSafe(upLeft))
+                return upLeft;
 
-        Vector3 localFromWorld = _cachedGeneratorTransform.InverseTransformPoint(new Vector3(worldX, 0f, 0f));
-        float clampedLocalX = Mathf.Clamp(localFromWorld.x, _cachedSurfaceMinX, _cachedSurfaceMaxX);
-        float localY = SampleSurfaceY_Local(_cachedSurfaceLocal, clampedLocalX);
+            Vector3 upRight = desiredPos + new Vector3(dist, dist, 0f);
+            if (IsSharedBallPositionSafe(upRight))
+                return upRight;
+        }
 
-        Vector3 localCandidate = new Vector3(clampedLocalX, localY + yOffset, 0f);
-        return _cachedGeneratorTransform.TransformPoint(localCandidate);
+        // 4. Search upward with more range
+        for (int i = 1; i <= sharedSafeMaxSteps * 4; i++)
+        {
+            Vector3 up = desiredPos + Vector3.up * (sharedSafeStepDistance * i);
+            if (IsSharedBallPositionSafe(up))
+                return up;
+        }
+
+        // 5. Try current blue ball position if safe
+        if (blueBall != null && IsSharedBallPositionSafe(blueBall.transform.position))
+            return blueBall.transform.position;
+
+        // 6. Try current red ball position if safe
+        if (redBall != null && IsSharedBallPositionSafe(redBall.transform.position))
+            return redBall.transform.position;
+
+        // 7. Last resort: force a high upward escape
+        Vector3 forcedUp = desiredPos + Vector3.up * (sharedSafeStepDistance * sharedSafeMaxSteps * 6);
+        if (IsSharedBallPositionSafe(forcedUp))
+            return forcedUp;
+
+        Debug.LogWarning("[ObstaclePlacement2D] Could not find a perfect safe teleport spot. Using desired position as emergency fallback.");
+        return desiredPos;
     }
 
     bool IsSharedBallPositionSafe(Vector3 testPos)
     {
-        if (blueBall == null || redBall == null)
-            return true;
-
-        for (int i = 0; i < _spawnedCollisionControllers.Count; i++)
-        {
-            ObstacleBallCollision2D controller = _spawnedCollisionControllers[i];
-            if (controller == null) continue;
-
-            if (controller.IsPositionBlockedForBlockingBall(testPos, sharedSafeClearance))
-                return false;
-        }
+        if (!IsObstacleSafeAt(testPos))
+            return false;
 
         if (!HasPlayableGroundAt(testPos))
             return false;
@@ -445,45 +458,31 @@ public class ObstaclePlacement2D : MonoBehaviour
         Vector3 localPos = _cachedGeneratorTransform.InverseTransformPoint(worldPos);
 
         float centerX = Mathf.Clamp(localPos.x, _cachedSurfaceMinX, _cachedSurfaceMaxX);
-
-        float nearLeftX = Mathf.Clamp(centerX - nearGroundCheckHalfWidth, _cachedSurfaceMinX, _cachedSurfaceMaxX);
-        float nearRightX = Mathf.Clamp(centerX + nearGroundCheckHalfWidth, _cachedSurfaceMinX, _cachedSurfaceMaxX);
-
-        float farLeftX = Mathf.Clamp(centerX - farGroundCheckHalfWidth, _cachedSurfaceMinX, _cachedSurfaceMaxX);
-        float farRightX = Mathf.Clamp(centerX + farGroundCheckHalfWidth, _cachedSurfaceMinX, _cachedSurfaceMaxX);
+        float leftX = Mathf.Clamp(centerX - groundCheckHalfWidth, _cachedSurfaceMinX, _cachedSurfaceMaxX);
+        float rightX = Mathf.Clamp(centerX + groundCheckHalfWidth, _cachedSurfaceMinX, _cachedSurfaceMaxX);
 
         float centerY = SampleSurfaceY_Local(_cachedSurfaceLocal, centerX);
-        float nearLeftY = SampleSurfaceY_Local(_cachedSurfaceLocal, nearLeftX);
-        float nearRightY = SampleSurfaceY_Local(_cachedSurfaceLocal, nearRightX);
-        float farLeftY = SampleSurfaceY_Local(_cachedSurfaceLocal, farLeftX);
-        float farRightY = SampleSurfaceY_Local(_cachedSurfaceLocal, farRightX);
+        float leftY = SampleSurfaceY_Local(_cachedSurfaceLocal, leftX);
+        float rightY = SampleSurfaceY_Local(_cachedSurfaceLocal, rightX);
 
         float centerAngle = Mathf.Abs(SampleSurfaceAngleDeg_Local(_cachedSurfaceLocal, centerX));
         if (centerAngle > maxSafeSurfaceAngleDeg)
             return false;
 
-        if (Mathf.Abs(centerY - nearLeftY) > maxNearGroundHeightDifference)
+        if (Mathf.Abs(centerY - leftY) > maxGroundHeightDifference)
             return false;
 
-        if (Mathf.Abs(centerY - nearRightY) > maxNearGroundHeightDifference)
+        if (Mathf.Abs(centerY - rightY) > maxGroundHeightDifference)
             return false;
 
-        if (Mathf.Abs(nearLeftY - nearRightY) > maxNearGroundHeightDifference)
+        if (Mathf.Abs(leftY - rightY) > maxGroundHeightDifference)
             return false;
 
-        if (Mathf.Abs(centerY - farLeftY) > maxFarGroundHeightDifference)
-            return false;
+        bool centerIsValleyBottom =
+            centerY + valleyTrapDepthTolerance < leftY &&
+            centerY + valleyTrapDepthTolerance < rightY;
 
-        if (Mathf.Abs(centerY - farRightY) > maxFarGroundHeightDifference)
-            return false;
-
-        bool isDeepValleyTrap =
-            (nearLeftY - centerY) > valleyTrapDepthTolerance &&
-            (nearRightY - centerY) > valleyTrapDepthTolerance &&
-            (farLeftY - centerY) > valleyTrapDepthTolerance &&
-            (farRightY - centerY) > valleyTrapDepthTolerance;
-
-        if (isDeepValleyTrap)
+        if (centerIsValleyBottom)
             return false;
 
         return true;
@@ -641,5 +640,66 @@ public class ObstaclePlacement2D : MonoBehaviour
 
             controller.ApplyHSVAdjustment();
         }
+    }
+
+    bool TryGetResolvedGroundedPosition(Vector3 candidatePos, out Vector3 resolvedPos)
+    {
+        resolvedPos = candidatePos;
+
+        // If we do not have terrain data, fall back to obstacle-only safety
+        if (_cachedSurfaceLocal == null || _cachedSurfaceLocal.Count < 2 || _cachedGeneratorTransform == null)
+        {
+            if (IsSharedBallPositionSafe(candidatePos))
+            {
+                resolvedPos = candidatePos;
+                return true;
+            }
+
+            return false;
+        }
+
+        // Snap candidate X to terrain surface first
+        Vector3 groundedPos = SnapWorldXToSurface(candidatePos);
+
+        // Check terrain playability at the grounded location
+        if (!HasPlayableGroundAt(groundedPos))
+            return false;
+
+        // Check obstacle blocking at the grounded location
+        if (!IsObstacleSafeAt(groundedPos))
+            return false;
+
+        resolvedPos = groundedPos;
+        return true;
+    }
+
+    Vector3 SnapWorldXToSurface(Vector3 worldPos)
+    {
+        Vector3 localPos = _cachedGeneratorTransform.InverseTransformPoint(worldPos);
+
+        float clampedX = Mathf.Clamp(localPos.x, _cachedSurfaceMinX, _cachedSurfaceMaxX);
+        float surfaceY = SampleSurfaceY_Local(_cachedSurfaceLocal, clampedX);
+
+        Vector3 snappedWorld = _cachedGeneratorTransform.TransformPoint(
+            new Vector3(clampedX, surfaceY, 0f));
+
+        return snappedWorld;
+    }
+
+    bool IsObstacleSafeAt(Vector3 testPos)
+    {
+        if (blueBall == null || redBall == null)
+            return true;
+
+        for (int i = 0; i < _spawnedCollisionControllers.Count; i++)
+        {
+            ObstacleBallCollision2D controller = _spawnedCollisionControllers[i];
+            if (controller == null) continue;
+
+            if (controller.IsPositionBlockedForBlockingBall(testPos, sharedSafeClearance))
+                return false;
+        }
+
+        return true;
     }
 }
