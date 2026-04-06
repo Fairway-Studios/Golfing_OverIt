@@ -6332,6 +6332,10 @@ PrefabInstance:
       propertyPath: falseFinishUI
       value: 
       objectReference: {fileID: 7214615401436138145}
+    - target: {fileID: 976483187152323640, guid: 3f265b9822362dc49820489563ba61de, type: 3}
+      propertyPath: fakeFinishCameraTriggers
+      value: 
+      objectReference: {fileID: 2566933063396659288}
     - target: {fileID: 3265073314316267639, guid: 3f265b9822362dc49820489563ba61de, type: 3}
       propertyPath: m_LocalScale.x
       value: 0.21567143
