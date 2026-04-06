@@ -119,6 +119,62 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &250849791
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 250849792}
+  - component: {fileID: 250849793}
+  m_Layer: 0
+  m_Name: AchvmntManagers
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &250849792
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 250849791}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 906.63464, y: 445.9519, z: -4.720711}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &250849793
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 250849791}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 331b956ac02b0f74bb122c209db90d8f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  popupUI: {fileID: 0}
+  allAchievements:
+  - {fileID: 11400000, guid: 0eb17dd3ca7aada44a2928731071652d, type: 2}
+  - {fileID: 11400000, guid: 8507000b217937d4bb519df1118b84f4, type: 2}
+  - {fileID: 11400000, guid: a9f1091115a780840aebbbdd06a3c6e3, type: 2}
+  - {fileID: 11400000, guid: 13eaa0e242f11ac4ebec5c1e67bbbb2c, type: 2}
+  - {fileID: 11400000, guid: 785e621744e3c994fbdfaf1316ae7c31, type: 2}
+  - {fileID: 11400000, guid: 4445bb8e98407124c94d904100bb418f, type: 2}
+  - {fileID: 11400000, guid: 2048324f817230d4d8c73680ee624993, type: 2}
+  - {fileID: 11400000, guid: f7f92521f42247f4b8e5090455df5c8b, type: 2}
+  - {fileID: 11400000, guid: 01e5a41aaccc4f6429f3bf3aa0adc21c, type: 2}
+  - {fileID: 11400000, guid: 643c0aefd5aeb18419fc77d2c6fc5f28, type: 2}
 --- !u!1 &409697388 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1619578719700203896, guid: 003c74d9facee284db07da88623dcf46, type: 3}
@@ -1834,6 +1890,18 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 1886318192126951885, guid: 003c74d9facee284db07da88623dcf46, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 3433200915844963058}
+    - target: {fileID: 1886318192126951885, guid: 003c74d9facee284db07da88623dcf46, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: LoadSceneByName
+      objectReference: {fileID: 0}
+    - target: {fileID: 1886318192126951885, guid: 003c74d9facee284db07da88623dcf46, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_StringArgument
+      value: AchievementScene
+      objectReference: {fileID: 0}
     - target: {fileID: 2182394207125808994, guid: 003c74d9facee284db07da88623dcf46, type: 3}
       propertyPath: m_UiScaleMode
       value: 1
@@ -2316,3 +2384,4 @@ SceneRoots:
   - {fileID: 719577098}
   - {fileID: 1917442633}
   - {fileID: 1930654171}
+  - {fileID: 250849792}

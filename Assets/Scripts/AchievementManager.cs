@@ -6,7 +6,7 @@ public class AchievementManager : MonoBehaviour
     public static AchievementManager Instance;
 
     [Header("References")]
-    [SerializeField] private AchievementPopupUI popupUI;
+    public AchievementPopupUI popupUI;
 
     public List<AchievementData> allAchievements;
 
@@ -14,12 +14,20 @@ public class AchievementManager : MonoBehaviour
 
     private void Awake()
     {
-        // Simple Singleton pattern
-        if (Instance == null) { Instance = this; }
-        else { Destroy(gameObject); }
+        if (Instance == null)
+        {
+            Instance = this;
+
+            // THIS IS THE MAGIC LINE: It tells Unity not to kill this object when switching scenes!
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
 
         // once you are done testing, or your game will wipe saves on every boot!
-        PlayerPrefs.DeleteKey("UnlockedAchievements");
+        //PlayerPrefs.DeleteKey("UnlockedAchievements");
 
         LoadUnlockedAchievements();
     }

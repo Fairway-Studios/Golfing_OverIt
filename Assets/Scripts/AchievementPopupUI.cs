@@ -35,6 +35,11 @@ public class AchievementPopupUI : MonoBehaviour
         hiddenPosition = new Vector2(0, panelRect.rect.height + 50); // Hidden above screen
 
         panelRect.anchoredPosition = hiddenPosition;
+
+        if (AchievementManager.Instance != null)
+        {
+            AchievementManager.Instance.popupUI = this;
+        }
     }
 
     public void QueueAchievement(AchievementData data)
