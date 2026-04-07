@@ -108,8 +108,6 @@ public class HoleController : MonoBehaviour
 
         ball.gameObject.SetActive(false);
 
-        
-
         if (AchievementManager.Instance != null)
         {
             // --- ACHIEVEMENT: Level Complete ---
@@ -162,7 +160,15 @@ public class HoleController : MonoBehaviour
     {
         if (gameOverPanel == null) return;
 
+        GameManager gameManager = Object.FindFirstObjectByType<GameManager>();
+        if (gameManager != null)
+            gameManager.StopTimer();
+
         Cursor.visible = true;
         gameOverPanel.SetActive(true);
+
+        WinUIFeedback feedback = gameOverPanel.GetComponentInChildren<WinUIFeedback>();
+        if (feedback != null)
+            feedback.DisplayResults();
     }
 }
