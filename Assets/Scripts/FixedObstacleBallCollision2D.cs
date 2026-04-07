@@ -65,8 +65,8 @@ public class FixedObstacleBallCollision2D : MonoBehaviour
         if (blueBall == null || redBall == null)
             return;
 
-        Collider2D[] blueCols = blueBall.GetComponentsInChildren<Collider2D>(true);
-        Collider2D[] redCols = redBall.GetComponentsInChildren<Collider2D>(true);
+        Collider2D[] redCols = blueBall.GetComponentsInChildren<Collider2D>(true);
+        Collider2D[] blueCols = redBall.GetComponentsInChildren<Collider2D>(true);
 
         SetIgnore(blueCols, false);
         SetIgnore(redCols, false);
