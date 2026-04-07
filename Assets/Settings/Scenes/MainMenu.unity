@@ -175,6 +175,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f7f92521f42247f4b8e5090455df5c8b, type: 2}
   - {fileID: 11400000, guid: 01e5a41aaccc4f6429f3bf3aa0adc21c, type: 2}
   - {fileID: 11400000, guid: 643c0aefd5aeb18419fc77d2c6fc5f28, type: 2}
+  - {fileID: 11400000, guid: e374e52f07dcef6469d907981430d4b6, type: 2}
 --- !u!1 &409697388 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1619578719700203896, guid: 003c74d9facee284db07da88623dcf46, type: 3}

@@ -10,15 +10,17 @@ public class AchievementManager : MonoBehaviour
 
     public List<AchievementData> allAchievements;
 
-    public HashSet<string> unlockedIDs = new HashSet<string>();
+    // --- NEW: Two Separate Buckets ---
+    public HashSet<string> unlockedSingleplayerIDs = new HashSet<string>();
+    public HashSet<string> unlockedMultiplayerIDs = new HashSet<string>();
+
+    [HideInInspector] public bool isMultiplayerModeActive = false;
 
     private void Awake()
     {
         if (Instance == null)
         {
             Instance = this;
-
-            // THIS IS THE MAGIC LINE: It tells Unity not to kill this object when switching scenes!
             DontDestroyOnLoad(gameObject);
         }
         else
@@ -26,36 +28,44 @@ public class AchievementManager : MonoBehaviour
             Destroy(gameObject);
         }
 
-        // once you are done testing, or your game will wipe saves on every boot!
-        //PlayerPrefs.DeleteKey("UnlockedAchievements");
+        // TEMPORARY: Un-comment these to wipe your saves while testing
+        PlayerPrefs.DeleteKey("UnlockedAchievements_SP");
+        PlayerPrefs.DeleteKey("UnlockedAchievements_MP");
 
         LoadUnlockedAchievements();
     }
 
     public void UnlockAchievement(string achievementID)
     {
-        // 1. Check if already unlocked (BYPASS this if it is our test achievement!)
-        if (achievementID != "TEST_SWING" && unlockedIDs.Contains(achievementID)) return;
-
-        // 2. Find the achievement data
+        // 1. Find the achievement data first so we know what category it is
         AchievementData unlockedData = allAchievements.Find(a => a.achievementID == achievementID);
 
         if (unlockedData != null)
         {
-            // 3. Mark as unlocked and save ONLY if it's a real achievement
-            if (achievementID != "TEST_SWING")
-            {
-                unlockedIDs.Add(achievementID);
-                SaveUnlockedAchievements();
-            }
+            if (isMultiplayerModeActive && unlockedData.category == AchievementCategory.Singleplayer) return;
+            // If we are in Singleplayer, completely ignore Multiplayer achievements
+            if (!isMultiplayerModeActive && unlockedData.category == AchievementCategory.Multiplayer) return;
+            // ------------------------------
 
-            // 4. Trigger UI and Sound
+            // 2. Determine which bucket this belongs in based on your ScriptableObject setup
+            HashSet<string> targetBucket = (unlockedData.category == AchievementCategory.Multiplayer)
+                                            ? unlockedMultiplayerIDs
+                                            : unlockedSingleplayerIDs;
+
+            // 3. If already unlocked in its specific bucket, ignore it
+            if (targetBucket.Contains(achievementID)) return;
+
+            // 4. Mark as unlocked and save
+            targetBucket.Add(achievementID);
+            SaveUnlockedAchievements();
+
+            // 5. Trigger UI and Sound
             if (popupUI != null)
             {
                 popupUI.QueueAchievement(unlockedData);
             }
 
-            Debug.Log("Achievement Triggered: " + unlockedData.title);
+            Debug.Log($"[{unlockedData.category}] Achievement Triggered: {unlockedData.title}");
         }
         else
         {
@@ -66,38 +76,49 @@ public class AchievementManager : MonoBehaviour
     // --- Save/Load Logic ---
     private void SaveUnlockedAchievements()
     {
-        // Convert HashSet to a comma-separated string for easy PlayerPrefs saving
-        string saveString = string.Join(",", unlockedIDs);
-        PlayerPrefs.SetString("UnlockedAchievements", saveString);
+        // Save Singleplayer
+        string spSaveString = string.Join(",", unlockedSingleplayerIDs);
+        PlayerPrefs.SetString("UnlockedAchievements_SP", spSaveString);
+
+        // Save Multiplayer
+        string mpSaveString = string.Join(",", unlockedMultiplayerIDs);
+        PlayerPrefs.SetString("UnlockedAchievements_MP", mpSaveString);
+
         PlayerPrefs.Save();
     }
 
     private void LoadUnlockedAchievements()
     {
-        string savedString = PlayerPrefs.GetString("UnlockedAchievements", "");
-        if (!string.IsNullOrEmpty(savedString))
+        // Load Singleplayer
+        string spSavedString = PlayerPrefs.GetString("UnlockedAchievements_SP", "");
+        if (!string.IsNullOrEmpty(spSavedString))
         {
-            string[] ids = savedString.Split(',');
-            foreach (string id in ids)
-            {
-                unlockedIDs.Add(id);
-            }
+            string[] ids = spSavedString.Split(',');
+            foreach (string id in ids) unlockedSingleplayerIDs.Add(id);
+        }
+
+        // Load Multiplayer
+        string mpSavedString = PlayerPrefs.GetString("UnlockedAchievements_MP", "");
+        if (!string.IsNullOrEmpty(mpSavedString))
+        {
+            string[] ids = mpSavedString.Split(',');
+            foreach (string id in ids) unlockedMultiplayerIDs.Add(id);
         }
     }
 
-    // Call this if a player starts a "New Game"
     public void ResetAchievements()
     {
-        unlockedIDs.Clear();
-        PlayerPrefs.DeleteKey("UnlockedAchievements");
+        unlockedSingleplayerIDs.Clear();
+        unlockedMultiplayerIDs.Clear();
+        PlayerPrefs.DeleteKey("UnlockedAchievements_SP");
+        PlayerPrefs.DeleteKey("UnlockedAchievements_MP");
     }
 
     private void Update()
     {
-        // TEMPORARY: Press 'T' to trigger a test achievement
         if (Input.GetKeyDown(KeyCode.T))
         {
-            UnlockAchievement("TEST_SWING");
+            UnlockAchievement("TEAM_EFFORT"); // Testing your new idea!
         }
     }
 }

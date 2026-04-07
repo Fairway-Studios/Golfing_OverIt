@@ -21,11 +21,13 @@ public class SceneMGR : MonoBehaviour
     [SerializeField] private GameObject newGameButton;
     [SerializeField] private GameObject singlePlayerMainButton;
 
-    // --- NEW: Pause Menu Focus Targets ---
     [Header("Pause Menu Focus Targets")]
-    [SerializeField] private GameObject pauseFirstButton;       // The Resume button
-    [SerializeField] private GameObject pauseSettingsButton;    // The Settings button
-    [SerializeField] private GameObject settingsFirstSlider;    // The Master Volume slider object
+    [SerializeField] private GameObject pauseFirstButton;
+    [SerializeField] private GameObject pauseSettingsButton;
+    [SerializeField] private GameObject settingsFirstSlider;
+    // --- NEW: Controls Menu Focus Targets ---
+    [SerializeField] private GameObject pauseControlsOpenButton; // The button on the pause menu that opens controls
+    [SerializeField] private GameObject controlsFirstButton;     // The "Back/Done" button inside the controls menu
 
     [Header("Game Over UI")]
     [SerializeField] private GameObject winCanvas;
@@ -35,6 +37,8 @@ public class SceneMGR : MonoBehaviour
     [SerializeField] private GameObject pauseMenuRoot;
     [SerializeField] private GameObject pauseButtons;
     [SerializeField] private GameObject pauseSettings;
+    // --- NEW: Controls Menu Panel ---
+    [SerializeField] private GameObject pauseControlsInfo;
 
     [SerializeField] private GameManager gameManager;
 
@@ -78,7 +82,6 @@ public class SceneMGR : MonoBehaviour
 
     private void Update()
     {
-        // 1. Keyboard Input
         if (keyActions != null)
         {
             foreach (var entry in keyActions)
@@ -87,24 +90,19 @@ public class SceneMGR : MonoBehaviour
             }
         }
 
-        // 2. Controller Input
         if (Gamepad.current != null)
         {
-            var eastButton = Gamepad.current.buttonEast;   // O on PS, B on Xbox
-            var startButton = Gamepad.current.startButton; // Options on PS, Start on Xbox
+            var eastButton = Gamepad.current.buttonEast;
+            var startButton = Gamepad.current.startButton;
 
-            // OPTIONS BUTTON: Always acts as the main Pause/Resume toggle
             if (startButton != null && startButton.wasPressedThisFrame)
             {
                 HandleEscapeInput();
             }
-            // O/B BUTTON: Only acts as "Back" if a menu is open or the game is already paused!
-            // This prevents the player from accidentally pausing the game while golfing.
             else if (eastButton != null && eastButton.wasPressedThisFrame)
             {
                 string sceneName = SceneManager.GetActiveScene().name;
 
-                // Allow O/B to trigger the Escape logic ONLY if we are in a menu screen or already paused
                 if (sceneName == "MainMenu" || sceneName == "CustomizationScene" || isGamePaused)
                 {
                     HandleEscapeInput();
@@ -226,8 +224,12 @@ public class SceneMGR : MonoBehaviour
         {
             if (pauseSettings != null && pauseSettings.activeSelf)
             {
-                // Replaced standard open with our new Close method so focus shifts!
                 ClosePauseSettings();
+            }
+            // --- NEW: Check if Controls menu is open, if so, back out of it ---
+            else if (pauseControlsInfo != null && pauseControlsInfo.activeSelf)
+            {
+                CloseControlsMenu();
             }
             else ResumeGame();
         }
@@ -246,7 +248,6 @@ public class SceneMGR : MonoBehaviour
         if (pauseMenuRoot != null) pauseMenuRoot.SetActive(true);
         OpenPauseButtons();
 
-        // Ensure the controller grabs the Resume button when pausing
         if (pauseFirstButton != null)
         {
             StartCoroutine(HighlightButtonDelayed(pauseFirstButton));
@@ -272,21 +273,22 @@ public class SceneMGR : MonoBehaviour
     {
         if (pauseButtons != null) pauseButtons.SetActive(true);
         if (pauseSettings != null) pauseSettings.SetActive(false);
+        if (pauseControlsInfo != null) pauseControlsInfo.SetActive(false); // Make sure Controls hide
     }
 
+    // --- Settings Menu Logic ---
     public void OpenPauseSettings()
     {
         if (pauseButtons != null) pauseButtons.SetActive(false);
+        if (pauseControlsInfo != null) pauseControlsInfo.SetActive(false);
         if (pauseSettings != null) pauseSettings.SetActive(true);
 
-        // --- NEW: Shift focus to the Volume Slider ---
         if (settingsFirstSlider != null)
         {
             StartCoroutine(HighlightButtonDelayed(settingsFirstSlider));
         }
     }
 
-    // --- NEW: Method to close settings and return focus ---
     public void ClosePauseSettings()
     {
         OpenPauseButtons();
@@ -297,6 +299,31 @@ public class SceneMGR : MonoBehaviour
         }
     }
 
+    // --- NEW: Controls Menu Logic ---
+    public void OpenControlsMenu()
+    {
+        if (pauseButtons != null) pauseButtons.SetActive(false);
+        if (pauseSettings != null) pauseSettings.SetActive(false);
+
+        if (pauseControlsInfo != null) pauseControlsInfo.SetActive(true);
+
+        if (controlsFirstButton != null)
+        {
+            StartCoroutine(HighlightButtonDelayed(controlsFirstButton));
+        }
+    }
+
+    public void CloseControlsMenu()
+    {
+        OpenPauseButtons();
+
+        if (pauseControlsOpenButton != null)
+        {
+            StartCoroutine(HighlightButtonDelayed(pauseControlsOpenButton));
+        }
+    }
+    // --------------------------------
+
     public void OpenMainMenuSettings()
     {
         SwitchToCanvas(settingsCanvas);
@@ -304,7 +331,7 @@ public class SceneMGR : MonoBehaviour
 
     private void SwitchToCanvas(GameObject target)
     {
-        GameObject[] allMenus = { menuCanvas, settingsCanvas, winCanvas, loseCanvas, singlePlayerSubMenu };
+        GameObject[] allMenus = { menuCanvas, settingsCanvas, winCanvas, loseCanvas, singlePlayerSubMenu, pauseControlsInfo };
 
         foreach (var canvas in allMenus)
         {
