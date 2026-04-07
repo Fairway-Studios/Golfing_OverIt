@@ -74,7 +74,7 @@ public class ObstaclePlacement2D : MonoBehaviour
     [SerializeField] private float sharedSafeStepDistance = 0.2f;
     [SerializeField] private int sharedSafeMaxSteps = 24;
     [SerializeField] private float sharedSafeClearance = 0.08f;
-    [SerializeField] private float sharedSafeEmergencyUpDistance = 8f;
+    //[SerializeField] private float sharedSafeEmergencyUpDistance = 8f;
 
     [Header("Teleport Terrain Safety (Multiplayer Only)")]
     [SerializeField] private float maxSafeSurfaceAngleDeg = 18f;

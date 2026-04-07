@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -41,9 +42,7 @@ public class PlaytestTeleportManager : MonoBehaviour
     private bool wasAnyBallMovingLastFrame = false;
     private bool suppressHistoryCaptureUntilBallsStop = false;
 
-    // NEW
     private bool isBrowsingHistory = false;
-    
 
     private void Start()
     {
@@ -196,6 +195,9 @@ public class PlaytestTeleportManager : MonoBehaviour
 
         if (shiftHeld && Input.GetKeyDown(nextSpawnKey))
         {
+            if (!CanUseManualTeleport())
+                return;
+
             isBrowsingHistory = false;
             TeleportToPreviousSpawn();
             return;
@@ -203,6 +205,9 @@ public class PlaytestTeleportManager : MonoBehaviour
 
         if (shiftHeld && Input.GetKeyDown(resetToFirstKey))
         {
+            if (!CanUseManualTeleport())
+                return;
+
             isBrowsingHistory = false;
             RestartScene();
             return;
@@ -210,6 +215,9 @@ public class PlaytestTeleportManager : MonoBehaviour
 
         if (Input.GetKeyDown(nextSpawnKey))
         {
+            if (!CanUseManualTeleport())
+                return;
+
             isBrowsingHistory = false;
             TeleportToNextSpawn();
             return;
@@ -217,6 +225,9 @@ public class PlaytestTeleportManager : MonoBehaviour
 
         if (Input.GetKeyDown(resetToFirstKey))
         {
+            if (!CanUseManualTeleport())
+                return;
+
             isBrowsingHistory = false;
             TeleportToFirstSpawn();
             return;
@@ -224,6 +235,9 @@ public class PlaytestTeleportManager : MonoBehaviour
 
         if (Input.GetKeyDown(previousShotCycleKey))
         {
+            if (!CanUseManualTeleport())
+                return;
+
             TeleportToPreviousShotHistoryPosition();
             return;
         }
@@ -247,11 +261,8 @@ public class PlaytestTeleportManager : MonoBehaviour
             return;
         }
 
-        // While browsing history with G, never record new history entries.
         if (isBrowsingHistory)
         {
-            // The moment the player makes a real new shot again,
-            // stop browsing mode and begin saving history again.
             if (!wasAnyBallMovingLastFrame && anyBallMoving)
             {
                 isBrowsingHistory = false;
@@ -276,6 +287,22 @@ public class PlaytestTeleportManager : MonoBehaviour
             return false;
 
         return ball.linearVelocity.sqrMagnitude > (movingVelocityThreshold * movingVelocityThreshold);
+    }
+
+    // NEW
+    private bool AreAnyBallsMoving()
+    {
+        return IsBallMoving(ball1) || IsBallMoving(ball2);
+    }
+
+    // NEW
+    private bool CanUseManualTeleport()
+    {
+        // Prevent teleporting while balls are still moving / mid-flight.
+        if (AreAnyBallsMoving())
+            return false;
+
+        return true;
     }
 
     private void SaveCurrentPositionToHistory(bool forceSave)
@@ -418,6 +445,9 @@ public class PlaytestTeleportManager : MonoBehaviour
 
     private void TeleportToSpawn(Vector3 targetPosition)
     {
+        // NEW
+        ForceCloseMultiplayerSelection();
+
         suppressHistoryCaptureUntilBallsStop = true;
         wasAnyBallMovingLastFrame = false;
 
@@ -475,6 +505,83 @@ public class PlaytestTeleportManager : MonoBehaviour
 
         if (controller != null)
             controller.ResetForNextShot();
+    }
+
+    // NEW
+    private void ForceCloseMultiplayerSelection()
+    {
+        if (gameManager == null)
+            return;
+
+        System.Type gmType = typeof(GameManager);
+        BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+
+        FieldInfo selectionActiveField = gmType.GetField("selectionActive", flags);
+        FieldInfo player1VotedAField = gmType.GetField("player1VotedA", flags);
+        FieldInfo player1VotedBField = gmType.GetField("player1VotedB", flags);
+        FieldInfo player2VotedAField = gmType.GetField("player2VotedA", flags);
+        FieldInfo player2VotedBField = gmType.GetField("player2VotedB", flags);
+        FieldInfo selectionUIField = gmType.GetField("selectionUI", flags);
+        FieldInfo ballIndicatorsField = gmType.GetField("ballIndicators", flags);
+
+        if (selectionActiveField != null)
+            selectionActiveField.SetValue(gameManager, false);
+
+        if (player1VotedAField != null) player1VotedAField.SetValue(gameManager, false);
+        if (player1VotedBField != null) player1VotedBField.SetValue(gameManager, false);
+        if (player2VotedAField != null) player2VotedAField.SetValue(gameManager, false);
+        if (player2VotedBField != null) player2VotedBField.SetValue(gameManager, false);
+
+        if (selectionUIField != null)
+        {
+            GameObject selectionUI = selectionUIField.GetValue(gameManager) as GameObject;
+            if (selectionUI != null)
+                selectionUI.SetActive(false);
+        }
+
+        if (ballIndicatorsField != null)
+        {
+            object indicatorArrayObject = ballIndicatorsField.GetValue(gameManager);
+            if (indicatorArrayObject is System.Array indicatorArray)
+            {
+                foreach (object indicatorObj in indicatorArray)
+                {
+                    if (indicatorObj == null)
+                        continue;
+
+                    BallIndicator indicator = indicatorObj as BallIndicator;
+                    if (indicator != null)
+                        indicator.Hide();
+                }
+            }
+        }
+    }
+
+
+    public bool TryGetLatestSafePosition(out Vector3 safePosition)
+    {
+        if (shotHistoryPositions != null && shotHistoryPositions.Count > 0)
+        {
+            safePosition = shotHistoryPositions[shotHistoryPositions.Count - 1];
+
+            if (obstaclePlacement != null)
+                safePosition = obstaclePlacement.ResolveSharedSafeBallPosition(safePosition);
+
+            return true;
+        }
+
+        if (runtimeSpawnPoints != null && runtimeSpawnPoints.Count > 0 && runtimeSpawnPoints[0] != null)
+        {
+            safePosition = runtimeSpawnPoints[0].position;
+
+            if (obstaclePlacement != null)
+                safePosition = obstaclePlacement.ResolveSharedSafeBallPosition(safePosition);
+
+            return true;
+        }
+
+        safePosition = Vector3.zero;
+        return false;
     }
 
     private void RestartScene()
