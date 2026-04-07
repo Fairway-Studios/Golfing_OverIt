@@ -56,7 +56,7 @@ public class InputController : MonoBehaviour
     private GolfClubSettings currentClub;
     private GolfBallController[] allBalls;
 
-    private bool canSwing = true;
+    private bool canSwing = false;
 
     private bool movementLocked = false;
     private Vector2 lockedPosition;
@@ -109,7 +109,7 @@ public class InputController : MonoBehaviour
 
     void Update()
     {
-        if (sceneManager.IsGamePaused()) return;
+        if (sceneManager != null && sceneManager.IsGamePaused()) return;
         if (cameraController == null) return;
 
         Vector2 camInput = moveCameraAction.ReadValue<Vector2>();
@@ -127,9 +127,7 @@ public class InputController : MonoBehaviour
                 moveInput = Vector2.zero;
                 rb.linearVelocity = Vector2.zero;
                 rb.angularVelocity = 0f;
-
                 Debug.Log($"[InputController P{playerIndex}] Controller disconnected.");
-
                 break;
 
             case InputUserChange.DeviceRegained:
@@ -199,10 +197,13 @@ public class InputController : MonoBehaviour
 
     public void OnCycleClub(InputAction.CallbackContext context)
     {
-        if (sceneManager.IsGamePaused() || !context.performed) return;
+        if (sceneManager != null && sceneManager.IsGamePaused()) return;
+        if (!context.performed) return;
         if (availableClubs == null || availableClubs.Length == 0) return;
 
-        SFXManager.Instance.PlaySFX(swapClubsSFX);
+        if (SFXManager.Instance != null)
+            SFXManager.Instance.PlaySFX(swapClubsSFX);
+
         currentClubIndex = (currentClubIndex + 1) % availableClubs.Length;
         currentClub = availableClubs[currentClubIndex];
 
@@ -212,15 +213,15 @@ public class InputController : MonoBehaviour
 
     public void OnCycleCamTarget(InputAction.CallbackContext context)
     {
-        if (sceneManager.IsGamePaused()) return;
+        if (sceneManager != null && sceneManager.IsGamePaused()) return;
 
-        if (cameraController != null && context.performed && gameManager.IsMultiplayer())
+        if (cameraController != null && context.performed && gameManager != null && gameManager.IsMultiplayer())
             cameraController.CycleTargetBall();
     }
 
     public void OnInvertCamX(InputAction.CallbackContext context)
     {
-        if (sceneManager.IsGamePaused()) return;
+        if (sceneManager != null && sceneManager.IsGamePaused()) return;
 
         Debug.Log("Invert Cam X triggered");
         if (cameraController != null && context.performed)
@@ -229,7 +230,7 @@ public class InputController : MonoBehaviour
 
     public void OnSelectBallA(InputAction.CallbackContext context)
     {
-        if (sceneManager.IsGamePaused()) return;
+        if (sceneManager != null && sceneManager.IsGamePaused()) return;
 
         bool held = context.phase == InputActionPhase.Performed;
         if (gameManager == null) return;
@@ -239,7 +240,7 @@ public class InputController : MonoBehaviour
 
     public void OnSelectBallB(InputAction.CallbackContext context)
     {
-        if (sceneManager.IsGamePaused()) return;
+        if (sceneManager != null && sceneManager.IsGamePaused()) return;
 
         bool held = context.phase == InputActionPhase.Performed;
         if (gameManager == null) return;
@@ -349,7 +350,7 @@ public class InputController : MonoBehaviour
 
     void HitBall(GameObject ball, Vector2 velocity)
     {
-        if (currentClub == null || sceneManager.IsGamePaused()) return;
+        if (currentClub == null || (sceneManager != null && sceneManager.IsGamePaused())) return;
 
         Rigidbody2D ballRb = ball.GetComponent<Rigidbody2D>();
         if (ballRb == null) return;
@@ -361,8 +362,17 @@ public class InputController : MonoBehaviour
 
         PlayHitSound();
 
-        if (playerIndex == 0)
+        // 1. ORIGINAL LOGIC: Only count the official stroke for Player 1
+        if (playerIndex == 0 && gameManager != null)
+        {
             gameManager.RecordStroke();
+        }
+
+        // 2. SILENT TRACKER: Tell the GameManager someone swung, purely for achievements
+        if (gameManager != null)
+        {
+            gameManager.NotifyPlayerSwung(playerIndex);
+        }
 
         if (hitParticles != null && currentClub.clubName != "Putter")
         {
@@ -428,7 +438,8 @@ public class InputController : MonoBehaviour
             ? hitSounds[0]
             : hitSounds[Random.Range(1, hitSounds.Length)];
 
-        SFXManager.Instance.PlaySFX(clip);
+        if (SFXManager.Instance != null)
+            SFXManager.Instance.PlaySFX(clip);
     }
 
     public int GetPlayerIndex() => playerIndex;

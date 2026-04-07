@@ -23,6 +23,10 @@ public class GameManager : MonoBehaviour
     private bool player2VotedB = false;
     private bool isMultiplayer = false;
 
+    // --- NEW: Track individual swings for Multiplayer Achievements ---
+    private bool player1HasSwung = false;
+    private bool player2HasSwung = false;
+
     private int strokeCount = 0;
     private float elapsedTime = 0f;
     private bool timerRunning = false;
@@ -64,7 +68,7 @@ public class GameManager : MonoBehaviour
                 strokeCount = data.strokes;
                 elapsedTime = data.time;
 
-                // --- NEW: The Micro-Offset ---
+                // --- The Micro-Offset ---
                 // 0.05f is virtually invisible, but enough to force a clean collision check
                 Vector3 microOffset = new Vector3(0, 0.05f, 0);
 
@@ -152,11 +156,17 @@ public class GameManager : MonoBehaviour
     void DetectGameMode()
     {
         isMultiplayer = (players.Length >= 2) || forceMultiplayerMode;
+
+        // --- NEW: Tell the Achievement Boss what mode we are playing ---
+        if (AchievementManager.Instance != null)
+        {
+            AchievementManager.Instance.isMultiplayerModeActive = isMultiplayer;
+        }
     }
 
     void Update()
     {
-        if (timerRunning) 
+        if (timerRunning)
             elapsedTime += Time.deltaTime;
 
         if (!selectionActive)
@@ -385,7 +395,6 @@ public class GameManager : MonoBehaviour
         }
 
         // Move both balls to chosen position
-        // Move both balls to chosen position
         foreach (var ball in allBalls)
         {
             ball.DisableTrail();
@@ -471,10 +480,12 @@ public class GameManager : MonoBehaviour
         return isMultiplayer;
     }
 
+    // --- The original, untouched Stroke method ---
     public void RecordStroke()
     {
         strokeCount++;
 
+        // Singleplayer / Global Progression Checks
         if (strokeCount == 1 && AchievementManager.Instance != null)
         {
             AchievementManager.Instance.UnlockAchievement("FIRST_SWING");
@@ -482,6 +493,23 @@ public class GameManager : MonoBehaviour
         else if (strokeCount == 100 && AchievementManager.Instance != null)
         {
             AchievementManager.Instance.UnlockAchievement("CENTURY_CLUB");
+        }
+    }
+
+    // --- NEW: Silent tracker for multiplayer achievements ---
+    public void NotifyPlayerSwung(int playerIndex)
+    {
+        // Track exactly who took this swing behind the scenes
+        if (playerIndex == 0) player1HasSwung = true;
+        if (playerIndex == 1) player2HasSwung = true;
+
+        // If the game is multiplayer, and BOTH players have swung at least once
+        if (isMultiplayer && player1HasSwung && player2HasSwung)
+        {
+            if (AchievementManager.Instance != null)
+            {
+                AchievementManager.Instance.UnlockAchievement("TEAM_EFFORT");
+            }
         }
     }
 

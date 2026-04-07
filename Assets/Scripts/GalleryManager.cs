@@ -33,18 +33,24 @@ public class GalleryManager : MonoBehaviour
 
     void PopulateGallery()
     {
-        // Loop through the master dictionary
         foreach (AchievementData data in AchievementManager.Instance.allAchievements)
         {
-            // Check if it is unlocked
-            bool isUnlocked = AchievementManager.Instance.unlockedIDs.Contains(data.achievementID);
-
-            // Determine which Content transform to parent it to
+            bool isUnlocked = false;
             Transform targetContent = null;
-            if (data.category == AchievementCategory.Singleplayer) targetContent = singleplayerContent;
-            else if (data.category == AchievementCategory.Multiplayer) targetContent = multiplayerContent;
 
-            // Spawn the card and set it up if it belongs in a tab
+            // --- NEW: Route the logic based on the Category ---
+            if (data.category == AchievementCategory.Singleplayer)
+            {
+                isUnlocked = AchievementManager.Instance.unlockedSingleplayerIDs.Contains(data.achievementID);
+                targetContent = singleplayerContent;
+            }
+            else if (data.category == AchievementCategory.Multiplayer)
+            {
+                isUnlocked = AchievementManager.Instance.unlockedMultiplayerIDs.Contains(data.achievementID);
+                targetContent = multiplayerContent;
+            }
+
+            // Spawn the card
             if (targetContent != null)
             {
                 GameObject newCard = Instantiate(achievementCardPrefab, targetContent);
