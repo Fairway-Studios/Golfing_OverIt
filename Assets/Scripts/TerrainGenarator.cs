@@ -201,7 +201,7 @@ public class PerlinMountain2D : MonoBehaviour
             RemoveBacktrackingSpikes(polygon, 0.0001f);
 
             RemoveNearDuplicates(colliderPoly, 0.0001f);
-            RemoveBacktrackingSpikes(colliderPoly, 0.0001f);
+            //RemoveBacktrackingSpikes(colliderPoly, 0.0001f);
 
             if (fillMountain)
             {

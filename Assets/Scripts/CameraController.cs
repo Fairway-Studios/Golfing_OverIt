@@ -53,7 +53,7 @@ public class CameraController : MonoBehaviour
 
     // Manual camera
     private bool isManual;
-    private Vector2 manualInput;
+    private Vector2[] manualInputs = new Vector2[2];
     private float lastManualInputTime;
     private Vector3 manualOffset;
 
@@ -270,8 +270,10 @@ public class CameraController : MonoBehaviour
         composer.Composition.ScreenPosition = finalOffset;
     }
 
-    private void UpdateCamera()
+    private void UpdateCamera() 
     {
+        Vector2 manualInput = manualInputs[0].magnitude > manualInputs[1].magnitude ? manualInputs[0]: manualInputs[1];
+
         if (isManual)
         {
             manualOffset += new Vector3(manualInput.x, manualInput.y, 0f)
@@ -393,17 +395,16 @@ public class CameraController : MonoBehaviour
         SetBall(allBalls[currentBallIndex].transform);
     }
 
-    public void OnCameraMove(Vector2 input)
+    public void OnCameraMove(Vector2 input, int playerIndex)
     {
-        manualInput = input;
+        manualInputs[playerIndex] = input;
 
         if (input.magnitude > 0.1f)
         {
             if (!isManual)
-            {
                 manualOffset = followTarget.position - ball.position;
-                isManual = true;
-            }
+
+            isManual = true;
             lastManualInputTime = Time.time;
         }
     }

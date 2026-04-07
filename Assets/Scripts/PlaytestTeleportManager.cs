@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -18,20 +19,36 @@ public class PlaytestTeleportManager : MonoBehaviour
     [Header("Keys")]
     [SerializeField] private KeyCode nextSpawnKey = KeyCode.P;
     [SerializeField] private KeyCode resetToFirstKey = KeyCode.R;
+    [SerializeField] private KeyCode previousShotCycleKey = KeyCode.G;
+
+    [Header("Shot History")]
+    [SerializeField] private bool enableShotHistory = true;
+    [SerializeField] private int maxShotHistoryEntries = 100;
+    [SerializeField] private float movingVelocityThreshold = 0.08f;
+    [SerializeField] private float minHistoryPositionDifference = 0.2f;
 
     private int currentSpawnIndex = 0;
 
     private GameManager gameManager;
     private CameraController cameraController;
+    private ObstaclePlacement2D obstaclePlacement;
     private Transform[] players;
     private Transform cameraTransform;
 
     private List<Transform> runtimeSpawnPoints = new List<Transform>();
 
+    private readonly List<Vector3> shotHistoryPositions = new List<Vector3>();
+    private int historyBrowseIndex = -1;
+    private bool wasAnyBallMovingLastFrame = false;
+    private bool suppressHistoryCaptureUntilBallsStop = false;
+
+    private bool isBrowsingHistory = false;
+
     private void Start()
     {
         gameManager = Object.FindFirstObjectByType<GameManager>();
         cameraController = Object.FindFirstObjectByType<CameraController>();
+        obstaclePlacement = Object.FindFirstObjectByType<ObstaclePlacement2D>();
 
         if (Camera.main != null)
             cameraTransform = Camera.main.transform;
@@ -170,34 +187,178 @@ public class PlaytestTeleportManager : MonoBehaviour
         if (GravityFlipZone.IsGravityFlipped())
             return;
 
+        FindBalls();
         RefreshRuntimeSpawnList();
-
-        if (runtimeSpawnPoints == null || runtimeSpawnPoints.Count == 0)
-            return;
+        TrackShotHistory();
 
         bool shiftHeld = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
 
         if (shiftHeld && Input.GetKeyDown(nextSpawnKey))
         {
+            if (!CanUseManualTeleport())
+                return;
+
+            isBrowsingHistory = false;
             TeleportToPreviousSpawn();
             return;
         }
 
         if (shiftHeld && Input.GetKeyDown(resetToFirstKey))
         {
+            if (!CanUseManualTeleport())
+                return;
+
+            isBrowsingHistory = false;
             RestartScene();
             return;
         }
 
         if (Input.GetKeyDown(nextSpawnKey))
         {
+            if (!CanUseManualTeleport())
+                return;
+
+            isBrowsingHistory = false;
             TeleportToNextSpawn();
+            return;
         }
 
         if (Input.GetKeyDown(resetToFirstKey))
         {
+            if (!CanUseManualTeleport())
+                return;
+
+            isBrowsingHistory = false;
             TeleportToFirstSpawn();
+            return;
         }
+
+        if (Input.GetKeyDown(previousShotCycleKey))
+        {
+            if (!CanUseManualTeleport())
+                return;
+
+            TeleportToPreviousShotHistoryPosition();
+            return;
+        }
+    }
+
+    private void TrackShotHistory()
+    {
+        if (!enableShotHistory)
+            return;
+
+        bool anyBallMoving = IsBallMoving(ball1) || IsBallMoving(ball2);
+
+        if (suppressHistoryCaptureUntilBallsStop)
+        {
+            if (!anyBallMoving)
+            {
+                suppressHistoryCaptureUntilBallsStop = false;
+            }
+
+            wasAnyBallMovingLastFrame = anyBallMoving;
+            return;
+        }
+
+        if (isBrowsingHistory)
+        {
+            if (!wasAnyBallMovingLastFrame && anyBallMoving)
+            {
+                isBrowsingHistory = false;
+                SaveCurrentPositionToHistory(false);
+            }
+
+            wasAnyBallMovingLastFrame = anyBallMoving;
+            return;
+        }
+
+        if (!wasAnyBallMovingLastFrame && anyBallMoving)
+        {
+            SaveCurrentPositionToHistory(false);
+        }
+
+        wasAnyBallMovingLastFrame = anyBallMoving;
+    }
+
+    private bool IsBallMoving(Rigidbody2D ball)
+    {
+        if (ball == null)
+            return false;
+
+        return ball.linearVelocity.sqrMagnitude > (movingVelocityThreshold * movingVelocityThreshold);
+    }
+
+    // NEW
+    private bool AreAnyBallsMoving()
+    {
+        return IsBallMoving(ball1) || IsBallMoving(ball2);
+    }
+
+    // NEW
+    private bool CanUseManualTeleport()
+    {
+        // Prevent teleporting while balls are still moving / mid-flight.
+        if (AreAnyBallsMoving())
+            return false;
+
+        return true;
+    }
+
+    private void SaveCurrentPositionToHistory(bool forceSave)
+    {
+        Vector3 currentPos = GetCurrentSharedBallPosition();
+
+        if (!forceSave && shotHistoryPositions.Count > 0)
+        {
+            float dist = Vector3.Distance(shotHistoryPositions[shotHistoryPositions.Count - 1], currentPos);
+            if (dist < minHistoryPositionDifference)
+                return;
+        }
+
+        shotHistoryPositions.Add(currentPos);
+
+        if (shotHistoryPositions.Count > maxShotHistoryEntries)
+            shotHistoryPositions.RemoveAt(0);
+
+        historyBrowseIndex = shotHistoryPositions.Count;
+    }
+
+    private Vector3 GetCurrentSharedBallPosition()
+    {
+        if (ball1 != null)
+            return ball1.position;
+
+        if (ball2 != null)
+            return ball2.position;
+
+        return Vector3.zero;
+    }
+
+    private void TeleportToPreviousShotHistoryPosition()
+    {
+        if (!enableShotHistory)
+            return;
+
+        if (shotHistoryPositions == null || shotHistoryPositions.Count == 0)
+            return;
+
+        isBrowsingHistory = true;
+
+        historyBrowseIndex--;
+
+        if (historyBrowseIndex < 0)
+            historyBrowseIndex = shotHistoryPositions.Count - 1;
+
+        if (historyBrowseIndex >= shotHistoryPositions.Count)
+            historyBrowseIndex = shotHistoryPositions.Count - 1;
+
+        Vector3 targetPosition = shotHistoryPositions[historyBrowseIndex];
+
+        if (obstaclePlacement != null)
+            targetPosition = obstaclePlacement.ResolveSharedSafeBallPosition(targetPosition);
+
+        TeleportToSpawn(targetPosition);
     }
 
     private void TeleportToNextSpawn()
@@ -223,7 +384,12 @@ public class PlaytestTeleportManager : MonoBehaviour
                 return;
         }
 
-        TeleportToSpawn(runtimeSpawnPoints[currentSpawnIndex].position);
+        Vector3 targetPosition = runtimeSpawnPoints[currentSpawnIndex].position;
+
+        if (obstaclePlacement != null)
+            targetPosition = obstaclePlacement.ResolveSharedSafeBallPosition(targetPosition);
+
+        TeleportToSpawn(targetPosition);
     }
 
     private void TeleportToPreviousSpawn()
@@ -249,7 +415,12 @@ public class PlaytestTeleportManager : MonoBehaviour
                 return;
         }
 
-        TeleportToSpawn(runtimeSpawnPoints[currentSpawnIndex].position);
+        Vector3 targetPosition = runtimeSpawnPoints[currentSpawnIndex].position;
+
+        if (obstaclePlacement != null)
+            targetPosition = obstaclePlacement.ResolveSharedSafeBallPosition(targetPosition);
+
+        TeleportToSpawn(targetPosition);
     }
 
     private void TeleportToFirstSpawn()
@@ -264,11 +435,22 @@ public class PlaytestTeleportManager : MonoBehaviour
         if (runtimeSpawnPoints[currentSpawnIndex] == null)
             return;
 
-        TeleportToSpawn(runtimeSpawnPoints[currentSpawnIndex].position);
+        Vector3 targetPosition = runtimeSpawnPoints[currentSpawnIndex].position;
+
+        if (obstaclePlacement != null)
+            targetPosition = obstaclePlacement.ResolveSharedSafeBallPosition(targetPosition);
+
+        TeleportToSpawn(targetPosition);
     }
 
     private void TeleportToSpawn(Vector3 targetPosition)
     {
+        // NEW
+        ForceCloseMultiplayerSelection();
+
+        suppressHistoryCaptureUntilBallsStop = true;
+        wasAnyBallMovingLastFrame = false;
+
         InputController[] controllers = Object.FindObjectsByType<InputController>(FindObjectsSortMode.None);
         foreach (var controller in controllers)
         {
@@ -323,6 +505,83 @@ public class PlaytestTeleportManager : MonoBehaviour
 
         if (controller != null)
             controller.ResetForNextShot();
+    }
+
+    // NEW
+    private void ForceCloseMultiplayerSelection()
+    {
+        if (gameManager == null)
+            return;
+
+        System.Type gmType = typeof(GameManager);
+        BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+
+        FieldInfo selectionActiveField = gmType.GetField("selectionActive", flags);
+        FieldInfo player1VotedAField = gmType.GetField("player1VotedA", flags);
+        FieldInfo player1VotedBField = gmType.GetField("player1VotedB", flags);
+        FieldInfo player2VotedAField = gmType.GetField("player2VotedA", flags);
+        FieldInfo player2VotedBField = gmType.GetField("player2VotedB", flags);
+        FieldInfo selectionUIField = gmType.GetField("selectionUI", flags);
+        FieldInfo ballIndicatorsField = gmType.GetField("ballIndicators", flags);
+
+        if (selectionActiveField != null)
+            selectionActiveField.SetValue(gameManager, false);
+
+        if (player1VotedAField != null) player1VotedAField.SetValue(gameManager, false);
+        if (player1VotedBField != null) player1VotedBField.SetValue(gameManager, false);
+        if (player2VotedAField != null) player2VotedAField.SetValue(gameManager, false);
+        if (player2VotedBField != null) player2VotedBField.SetValue(gameManager, false);
+
+        if (selectionUIField != null)
+        {
+            GameObject selectionUI = selectionUIField.GetValue(gameManager) as GameObject;
+            if (selectionUI != null)
+                selectionUI.SetActive(false);
+        }
+
+        if (ballIndicatorsField != null)
+        {
+            object indicatorArrayObject = ballIndicatorsField.GetValue(gameManager);
+            if (indicatorArrayObject is System.Array indicatorArray)
+            {
+                foreach (object indicatorObj in indicatorArray)
+                {
+                    if (indicatorObj == null)
+                        continue;
+
+                    BallIndicator indicator = indicatorObj as BallIndicator;
+                    if (indicator != null)
+                        indicator.Hide();
+                }
+            }
+        }
+    }
+
+
+    public bool TryGetLatestSafePosition(out Vector3 safePosition)
+    {
+        if (shotHistoryPositions != null && shotHistoryPositions.Count > 0)
+        {
+            safePosition = shotHistoryPositions[shotHistoryPositions.Count - 1];
+
+            if (obstaclePlacement != null)
+                safePosition = obstaclePlacement.ResolveSharedSafeBallPosition(safePosition);
+
+            return true;
+        }
+
+        if (runtimeSpawnPoints != null && runtimeSpawnPoints.Count > 0 && runtimeSpawnPoints[0] != null)
+        {
+            safePosition = runtimeSpawnPoints[0].position;
+
+            if (obstaclePlacement != null)
+                safePosition = obstaclePlacement.ResolveSharedSafeBallPosition(safePosition);
+
+            return true;
+        }
+
+        safePosition = Vector3.zero;
+        return false;
     }
 
     private void RestartScene()
