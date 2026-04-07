@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 
+
 /// <summary>
 /// Spawns obstacle prefabs along a generated 2D terrain surface.
 /// - Uses a local System.Random so it does NOT mess with UnityEngine.Random state.
