@@ -67,7 +67,7 @@ public class InputController : MonoBehaviour
     private const int SWING_GAMEPAD_BINDING = 1;
     private const int MOVECAMERA_GAMEPAD_BINDING = 0;
 
-
+    private InputAction moveCameraAction;
     private string sceneName => SceneManager.GetActiveScene().name;
 
     void Awake()
@@ -77,6 +77,8 @@ public class InputController : MonoBehaviour
 
         cameraController = FindFirstObjectByType<CameraController>();
         gameManager = FindFirstObjectByType<GameManager>();
+
+        moveCameraAction = playerInput.actions["MoveCamera"];
 
         RefreshBallList();
 
@@ -103,6 +105,15 @@ public class InputController : MonoBehaviour
     void OnDestroy()
     {
         InputUser.onChange -= OnInputUserChange;
+    }
+
+    void Update()
+    {
+        if (sceneManager.IsGamePaused()) return;
+        if (cameraController == null) return;
+
+        Vector2 camInput = moveCameraAction.ReadValue<Vector2>();
+        cameraController.OnCameraMove(camInput, playerIndex);
     }
 
     private void OnInputUserChange(InputUser user, InputUserChange change, InputDevice device)
@@ -214,14 +225,6 @@ public class InputController : MonoBehaviour
         Debug.Log("Invert Cam X triggered");
         if (cameraController != null && context.performed)
             cameraController.SwapHorizontalBias();
-    }
-
-    public void OnMoveCamera(InputAction.CallbackContext context)
-    {
-        if (sceneManager.IsGamePaused()) return;
-
-        if (cameraController != null)
-            cameraController.OnCameraMove(context.ReadValue<Vector2>());
     }
 
     public void OnSelectBallA(InputAction.CallbackContext context)

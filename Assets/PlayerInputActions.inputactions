@@ -187,7 +187,7 @@
                     "path": "<Keyboard>/upArrow",
                     "interactions": "",
                     "processors": "",
-                    "groups": "",
+                    "groups": ";Mouse",
                     "action": "MoveCamera",
                     "isComposite": false,
                     "isPartOfComposite": true
@@ -198,7 +198,7 @@
                     "path": "<Keyboard>/downArrow",
                     "interactions": "",
                     "processors": "",
-                    "groups": "",
+                    "groups": ";Mouse",
                     "action": "MoveCamera",
                     "isComposite": false,
                     "isPartOfComposite": true
@@ -209,7 +209,7 @@
                     "path": "<Keyboard>/leftArrow",
                     "interactions": "",
                     "processors": "",
-                    "groups": "",
+                    "groups": ";Mouse",
                     "action": "MoveCamera",
                     "isComposite": false,
                     "isPartOfComposite": true
@@ -220,7 +220,7 @@
                     "path": "<Keyboard>/rightArrow",
                     "interactions": "",
                     "processors": "",
-                    "groups": "",
+                    "groups": ";Mouse",
                     "action": "MoveCamera",
                     "isComposite": false,
                     "isPartOfComposite": true
@@ -242,7 +242,7 @@
                     "path": "<Keyboard>/c",
                     "interactions": "",
                     "processors": "",
-                    "groups": "",
+                    "groups": ";Mouse",
                     "action": "CycleCamTarget",
                     "isComposite": false,
                     "isPartOfComposite": false
@@ -253,7 +253,7 @@
                     "path": "<Keyboard>/v",
                     "interactions": "",
                     "processors": "",
-                    "groups": "",
+                    "groups": ";Mouse",
                     "action": "InvertCamX",
                     "isComposite": false,
                     "isPartOfComposite": false
@@ -264,7 +264,7 @@
                     "path": "<Gamepad>/dpad/up",
                     "interactions": "",
                     "processors": "",
-                    "groups": "",
+                    "groups": ";Controller",
                     "action": "InvertCamX",
                     "isComposite": false,
                     "isPartOfComposite": false
