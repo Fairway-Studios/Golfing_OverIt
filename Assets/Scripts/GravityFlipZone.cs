@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class GravityFlipZone : MonoBehaviour
@@ -12,6 +13,15 @@ public class GravityFlipZone : MonoBehaviour
     private GameManager gameManager;
     private static bool s_gravityFlipped = false;
 
+    // ADDED: separate visual state from gameplay gravity state
+    private static bool s_visualGravityFlipped = false;
+
+    // ADDED: lets us delay the visual flip slightly so teleport/position correction can happen first
+    [SerializeField] private float visualFlipDelay = 4f;
+
+    // ADDED: track running coroutine so repeated trigger hits do not stack flips
+    private Coroutine visualFlipCoroutine;
+
     [SerializeField] private CameraController cameraController;
 
     void Start()
@@ -24,13 +34,16 @@ public class GravityFlipZone : MonoBehaviour
             originalOffset = gameManager.GetPlayerOffsetFromBall();
             flippedOffset = new Vector3(originalOffset.x, -originalOffset.y, originalOffset.z);
         }
+
+        // ADDED: keep visual state in sync on scene start
+        s_visualGravityFlipped = s_gravityFlipped;
     }
 
     void LateUpdate()
     {
         // Only handle visual rotation — position handled by GameManager now
         if (playerVisual != null)
-            playerVisual.localEulerAngles = new Vector3(0f, 0f, s_gravityFlipped ? 180f : 0f);
+            playerVisual.localEulerAngles = new Vector3(0f, 0f, s_visualGravityFlipped ? 180f : 0f);
     }
 
     void OnTriggerEnter2D(Collider2D other)
@@ -42,26 +55,57 @@ public class GravityFlipZone : MonoBehaviour
 
         if (flipGravity)
         {
-            // ENTRY — tell GameManager to use flipped offset
+            // ENTRY — gameplay state changes immediately
             s_gravityFlipped = true;
             rb.gravityScale = -1f;
+
             if (gameManager != null)
                 gameManager.SetPlayerOffsetFromBall(flippedOffset);
 
-            cameraController.SwapVerticalBias();
+            if (cameraController != null)
+                cameraController.SwapVerticalBias();
+
+            // ADDED: visual flip happens after a short delay
+            StartDelayedVisualFlip(true);
         }
         else
         {
-            // EXIT — restore GameManager to original offset
+            // EXIT — gameplay state changes immediately
             s_gravityFlipped = false;
             rb.gravityScale = originalGravityScale;
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f);
             rb.AddForce(Vector2.down * 3f, ForceMode2D.Impulse);
+
             if (gameManager != null)
                 gameManager.SetPlayerOffsetFromBall(originalOffset);
 
-            cameraController.SwapVerticalBias();
+            if (cameraController != null)
+                cameraController.SwapVerticalBias();
+
+            // ADDED: visual unflip happens after a short delay
+            StartDelayedVisualFlip(false);
         }
+    }
+
+    // ADDED
+    private void StartDelayedVisualFlip(bool flippedState)
+    {
+        if (visualFlipCoroutine != null)
+            StopCoroutine(visualFlipCoroutine);
+
+        visualFlipCoroutine = StartCoroutine(ApplyVisualFlipAfterDelay(flippedState));
+    }
+
+    // ADDED
+    private IEnumerator ApplyVisualFlipAfterDelay(bool flippedState)
+    {
+        if (visualFlipDelay > 0f)
+            yield return new WaitForSeconds(visualFlipDelay);
+        else
+            yield return null;
+
+        s_visualGravityFlipped = flippedState;
+        visualFlipCoroutine = null;
     }
 
     public static bool IsGravityFlipped() => s_gravityFlipped;
