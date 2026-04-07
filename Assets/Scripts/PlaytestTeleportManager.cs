@@ -57,8 +57,6 @@ public class PlaytestTeleportManager : MonoBehaviour
         FindPlayers();
         FindBalls();
         BuildRuntimeSpawnList();
-
-        SaveCurrentPositionToHistory(true);
     }
 
     private void FindPlayers()
