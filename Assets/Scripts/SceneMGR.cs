@@ -78,6 +78,7 @@ public class SceneMGR : MonoBehaviour
 
     private void Update()
     {
+        // 1. Keyboard Input
         if (keyActions != null)
         {
             foreach (var entry in keyActions)
@@ -86,12 +87,28 @@ public class SceneMGR : MonoBehaviour
             }
         }
 
+        // 2. Controller Input
         if (Gamepad.current != null)
         {
-            var eastButton = Gamepad.current.buttonEast;
-            if (eastButton != null && eastButton.wasPressedThisFrame)
+            var eastButton = Gamepad.current.buttonEast;   // O on PS, B on Xbox
+            var startButton = Gamepad.current.startButton; // Options on PS, Start on Xbox
+
+            // OPTIONS BUTTON: Always acts as the main Pause/Resume toggle
+            if (startButton != null && startButton.wasPressedThisFrame)
             {
                 HandleEscapeInput();
+            }
+            // O/B BUTTON: Only acts as "Back" if a menu is open or the game is already paused!
+            // This prevents the player from accidentally pausing the game while golfing.
+            else if (eastButton != null && eastButton.wasPressedThisFrame)
+            {
+                string sceneName = SceneManager.GetActiveScene().name;
+
+                // Allow O/B to trigger the Escape logic ONLY if we are in a menu screen or already paused
+                if (sceneName == "MainMenu" || sceneName == "CustomizationScene" || isGamePaused)
+                {
+                    HandleEscapeInput();
+                }
             }
         }
     }
