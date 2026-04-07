@@ -1,8 +1,11 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI; // Added for Button interaction
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 
 public class SceneMGR : MonoBehaviour
 {
@@ -10,10 +13,19 @@ public class SceneMGR : MonoBehaviour
     [SerializeField] private GameObject menuCanvas;
     [SerializeField] private GameObject settingsCanvas;
 
-    // --- NEW: Singleplayer Sub-Menu References ---
     [Header("Singleplayer Mode UI")]
-    [SerializeField] private GameObject singlePlayerSubMenu; // The Panel with New Game / Continue
-    [SerializeField] private Button continueButton;          // To disable if no save exists
+    [SerializeField] private GameObject singlePlayerSubMenu;
+    [SerializeField] private Button continueButton;
+
+    [Header("Main Menu Focus Targets")]
+    [SerializeField] private GameObject newGameButton;
+    [SerializeField] private GameObject singlePlayerMainButton;
+
+    // --- NEW: Pause Menu Focus Targets ---
+    [Header("Pause Menu Focus Targets")]
+    [SerializeField] private GameObject pauseFirstButton;       // The Resume button
+    [SerializeField] private GameObject pauseSettingsButton;    // The Settings button
+    [SerializeField] private GameObject settingsFirstSlider;    // The Master Volume slider object
 
     [Header("Game Over UI")]
     [SerializeField] private GameObject winCanvas;
@@ -29,13 +41,12 @@ public class SceneMGR : MonoBehaviour
     private GameObject[] balls;
     private Dictionary<KeyCode, Action> keyActions;
     private bool isGamePaused = false;
-    private Transform playerTransform; // Cache for saving
+    private Transform playerTransform;
 
     private void Start()
     {
         balls = GameObject.FindGameObjectsWithTag("GolfBall");
 
-        // Try to find player for saving (Singleplayer assumption)
         GameObject p1 = GameObject.FindGameObjectWithTag("Player");
         if (p1 != null) playerTransform = p1.transform;
 
@@ -52,8 +63,12 @@ public class SceneMGR : MonoBehaviour
         if (currentScene == "MainMenu" || currentScene == "CustomizationScene")
         {
             SwitchToCanvas(menuCanvas);
-            // Hide the sub-menu by default
             if (singlePlayerSubMenu != null) singlePlayerSubMenu.SetActive(false);
+
+            if (EventSystem.current != null && singlePlayerMainButton != null)
+            {
+                StartCoroutine(HighlightButtonDelayed(singlePlayerMainButton));
+            }
         }
         else
         {
@@ -63,33 +78,60 @@ public class SceneMGR : MonoBehaviour
 
     private void Update()
     {
-        foreach (var entry in keyActions)
+        if (keyActions != null)
         {
-            if (Input.GetKeyDown(entry.Key)) entry.Value?.Invoke();
+            foreach (var entry in keyActions)
+            {
+                if (Input.GetKeyDown(entry.Key)) entry.Value?.Invoke();
+            }
+        }
+
+        if (Gamepad.current != null)
+        {
+            var eastButton = Gamepad.current.buttonEast;
+            if (eastButton != null && eastButton.wasPressedThisFrame)
+            {
+                HandleEscapeInput();
+            }
         }
     }
 
-    // --- NEW: Menu Navigation Logic ---
-
     public void OpenSinglePlayerMenu()
     {
-        // ONLY turn on the sub-menu. Leave menuCanvas alone so the background stays!
         if (singlePlayerSubMenu != null)
         {
             singlePlayerSubMenu.SetActive(true);
 
-            // Check if we can continue
             if (continueButton != null)
             {
                 continueButton.interactable = SaveSystem.HasSaveFile();
+            }
+
+            if (newGameButton != null)
+            {
+                StartCoroutine(HighlightButtonDelayed(newGameButton));
             }
         }
     }
 
     public void BackToMainMenu()
     {
-        // ONLY hide the sub-menu.
-        if (singlePlayerSubMenu != null) singlePlayerSubMenu.SetActive(false);
+        if (singlePlayerSubMenu != null)
+        {
+            singlePlayerSubMenu.SetActive(false);
+
+            if (singlePlayerMainButton != null)
+            {
+                StartCoroutine(HighlightButtonDelayed(singlePlayerMainButton));
+            }
+        }
+    }
+
+    private IEnumerator HighlightButtonDelayed(GameObject targetButton)
+    {
+        EventSystem.current.SetSelectedGameObject(null);
+        yield return null;
+        EventSystem.current.SetSelectedGameObject(targetButton);
     }
 
     public void LoadSceneByName(string sceneName)
@@ -101,9 +143,7 @@ public class SceneMGR : MonoBehaviour
     public void StartNewGame()
     {
         GameSession.IsLoadingGame = false;
-
         SaveSystem.DeleteSaveFile();
-
         SceneManager.LoadScene("SingleplayerScene");
     }
 
@@ -118,7 +158,6 @@ public class SceneMGR : MonoBehaviour
 
     public void SaveGame()
     {
-        // Find both objects
         GameObject p = GameObject.FindGameObjectWithTag("Player");
         GameObject ball = GameObject.FindGameObjectWithTag("GolfBall");
 
@@ -127,10 +166,7 @@ public class SceneMGR : MonoBehaviour
             int currentStrokes = gameManager.GetStrokeCount();
             float currentTime = gameManager.GetElapsedTime();
 
-            // Send both to be saved
             SaveSystem.SavePlayer(p.transform, ball.transform, SceneManager.GetActiveScene().buildIndex, currentStrokes, currentTime);
-
-            // --- ACHIEVEMENT: First Save ---
             AchievementManager.Instance.UnlockAchievement("FIRST_SAVE");
         }
         else
@@ -138,8 +174,6 @@ public class SceneMGR : MonoBehaviour
             Debug.LogError("Cannot Save: Could not find either the Player or the Golf Ball in the scene!");
         }
     }
-
-    // --- Existing Pause/Menu Logic (Unchanged) ---
 
     private void HandleEscapeInput()
     {
@@ -150,9 +184,13 @@ public class SceneMGR : MonoBehaviour
             if (settingsCanvas != null && settingsCanvas.activeSelf)
             {
                 SwitchToCanvas(menuCanvas);
+
+                if (singlePlayerMainButton != null)
+                {
+                    StartCoroutine(HighlightButtonDelayed(singlePlayerMainButton));
+                }
                 return;
             }
-            // If in sub-menu, go back
             if (singlePlayerSubMenu != null && singlePlayerSubMenu.activeSelf)
             {
                 BackToMainMenu();
@@ -169,7 +207,11 @@ public class SceneMGR : MonoBehaviour
 
         if (isGamePaused)
         {
-            if (pauseSettings != null && pauseSettings.activeSelf) OpenPauseButtons();
+            if (pauseSettings != null && pauseSettings.activeSelf)
+            {
+                // Replaced standard open with our new Close method so focus shifts!
+                ClosePauseSettings();
+            }
             else ResumeGame();
         }
         else
@@ -184,10 +226,14 @@ public class SceneMGR : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         gameManager.StopTimer();
-        // Assuming you removed Time.timeScale per previous request, relying on input disable
-        // If physics pause is needed, add Time.timeScale = 0f here.
         if (pauseMenuRoot != null) pauseMenuRoot.SetActive(true);
         OpenPauseButtons();
+
+        // Ensure the controller grabs the Resume button when pausing
+        if (pauseFirstButton != null)
+        {
+            StartCoroutine(HighlightButtonDelayed(pauseFirstButton));
+        }
     }
 
     public void ResumeGame()
@@ -215,6 +261,23 @@ public class SceneMGR : MonoBehaviour
     {
         if (pauseButtons != null) pauseButtons.SetActive(false);
         if (pauseSettings != null) pauseSettings.SetActive(true);
+
+        // --- NEW: Shift focus to the Volume Slider ---
+        if (settingsFirstSlider != null)
+        {
+            StartCoroutine(HighlightButtonDelayed(settingsFirstSlider));
+        }
+    }
+
+    // --- NEW: Method to close settings and return focus ---
+    public void ClosePauseSettings()
+    {
+        OpenPauseButtons();
+
+        if (pauseSettingsButton != null)
+        {
+            StartCoroutine(HighlightButtonDelayed(pauseSettingsButton));
+        }
     }
 
     public void OpenMainMenuSettings()
@@ -244,5 +307,4 @@ public class SceneMGR : MonoBehaviour
     {
         return isGamePaused;
     }
-    
 }
