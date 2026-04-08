@@ -176,6 +176,12 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 01e5a41aaccc4f6429f3bf3aa0adc21c, type: 2}
   - {fileID: 11400000, guid: 643c0aefd5aeb18419fc77d2c6fc5f28, type: 2}
   - {fileID: 11400000, guid: e374e52f07dcef6469d907981430d4b6, type: 2}
+  - {fileID: 11400000, guid: 343009ee6392ea8428462601578a1ac7, type: 2}
+  - {fileID: 11400000, guid: 1b2a4840bd3ffd34c94718646758d10d, type: 2}
+  - {fileID: 11400000, guid: 4b59a32ab204adc43b835227210c2bc3, type: 2}
+  - {fileID: 11400000, guid: c533abc08c6fc9b4eb5bf88e3aa994af, type: 2}
+  - {fileID: 11400000, guid: eafba058182a9d046988dd51fc26a3ee, type: 2}
+  isMultiplayerModeActive: 0
 --- !u!1 &409697388 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1619578719700203896, guid: 003c74d9facee284db07da88623dcf46, type: 3}

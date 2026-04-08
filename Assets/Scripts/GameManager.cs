@@ -26,6 +26,14 @@ public class GameManager : MonoBehaviour
     // --- NEW: Track individual swings for Multiplayer Achievements ---
     private bool player1HasSwung = false;
     private bool player2HasSwung = false;
+    // --- NEW: Multiplayer Achievement Trackers ---
+    private float lastSwingTimeP1 = -1f;
+    private float lastSwingTimeP2 = -1f;
+    private int lastTeleportOwner = -1;
+    private int consecutiveTeleports = 0;
+    private bool p1FellThisTurn = false;
+    private bool p2FellThisTurn = false;
+    private float lastTeleportTime = -1f;
 
     private int strokeCount = 0;
     private float elapsedTime = 0f;
@@ -452,6 +460,26 @@ public class GameManager : MonoBehaviour
         if (selectionUI != null)
             selectionUI.SetActive(false);
 
+        // --- NEW: Track Teleport streaks for "The Backpack" ---
+        lastTeleportTime = Time.time; // Reset the Quick Draw timer
+        p1FellThisTurn = false;       // Reset fall flags for the next turn
+        p2FellThisTurn = false;
+
+        if (ownerIndex == lastTeleportOwner)
+        {
+            consecutiveTeleports++;
+            if (consecutiveTeleports >= 3 && isMultiplayer && AchievementManager.Instance != null)
+            {
+                AchievementManager.Instance.UnlockAchievement("THE_BACKPACK");
+            }
+        }
+        else
+        {
+            lastTeleportOwner = ownerIndex;
+            consecutiveTeleports = 1; // Reset streak if the other player's ball is chosen
+        }
+        // --------------------------------------------------------
+
         ResetVotes();
         selectionActive = false;
 
@@ -499,14 +527,45 @@ public class GameManager : MonoBehaviour
     // --- NEW: Silent tracker for multiplayer achievements ---
     public void NotifyPlayerSwung(int playerIndex)
     {
-        // Track exactly who took this swing behind the scenes
-        if (playerIndex == 0) player1HasSwung = true;
-        if (playerIndex == 1) player2HasSwung = true;
-
-        // If the game is multiplayer, and BOTH players have swung at least once
-        if (isMultiplayer && player1HasSwung && player2HasSwung)
+        if (playerIndex == 0)
         {
-            if (AchievementManager.Instance != null)
+            player1HasSwung = true;
+            lastSwingTimeP1 = Time.time;
+        }
+        if (playerIndex == 1)
+        {
+            player2HasSwung = true;
+            lastSwingTimeP2 = Time.time;
+        }
+
+        if (isMultiplayer && AchievementManager.Instance != null)
+        {
+            // 1. SYNCHRONIZED SWING (Great Minds Think Alike)
+            if (lastSwingTimeP1 > 0 && lastSwingTimeP2 > 0 && Mathf.Abs(lastSwingTimeP1 - lastSwingTimeP2) <= 0.5f)
+            {
+                AchievementManager.Instance.UnlockAchievement("SYNCHRONIZED_SWING");
+            }
+
+            // 2. QUICK DRAW (No Time To Think!)
+            if (lastTeleportTime > 0 && (Time.time - lastTeleportTime) <= 1.0f)
+            {
+                AchievementManager.Instance.UnlockAchievement("QUICK_DRAW");
+            }
+
+            // 3. IMPATIENT GOLFER (Get Out Of My Way!)
+            GolfBallController[] balls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
+            foreach (var ball in balls)
+            {
+                // If the OTHER player's ball is still moving when we swing...
+                if (ball.GetOwnerIndex() != playerIndex && !ball.IsStopped())
+                {
+                    AchievementManager.Instance.UnlockAchievement("IMPATIENT_GOLFER");
+                    break;
+                }
+            }
+
+            // 4. TEAM EFFORT
+            if (player1HasSwung && player2HasSwung)
             {
                 AchievementManager.Instance.UnlockAchievement("TEAM_EFFORT");
             }
@@ -523,5 +582,16 @@ public class GameManager : MonoBehaviour
     public void SetPlayerOffsetFromBall(Vector3 newOffset)
     {
         playerOffsetFromBall = newOffset;
+    }
+
+    public void NotifyLongFall(int playerIndex)
+    {
+        if (playerIndex == 0) p1FellThisTurn = true;
+        if (playerIndex == 1) p2FellThisTurn = true;
+
+        if (isMultiplayer && p1FellThisTurn && p2FellThisTurn && AchievementManager.Instance != null)
+        {
+            AchievementManager.Instance.UnlockAchievement("MISERY_COMPANY");
+        }
     }
 }

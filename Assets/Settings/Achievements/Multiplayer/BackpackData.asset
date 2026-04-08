@@ -10,11 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1af0a44fae0c28642af720692756dea8, type: 3}
-  m_Name: TeamEffortData
+  m_Name: BackpackData
   m_EditorClassIdentifier: 
-  achievementID: TEAM_EFFORT
-  title: 2 = 1
-  description: Both Players get their first stroke
-  icon: {fileID: 6010786457827662245, guid: 99988f7bff8222d41a63ef64b06ade78, type: 3}
+  achievementID: THE_BACKPACK
+  title: Heavy Carry
+  description: Vote to teleport to the exact same player's ball
+  icon: {fileID: -5641216039885835550, guid: 500badb1ef5858649b2750ba860bfdba, type: 3}
   unlockSound: {fileID: 8300000, guid: b03d128b0bb609b4a8c7be575b4c74e0, type: 3}
   category: 1
