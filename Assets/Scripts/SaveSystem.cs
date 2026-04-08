@@ -6,13 +6,17 @@ public static class SaveSystem
     // Saves the file to: C:/Users/[User]/AppData/LocalLow/FairwayStudios/GolfingOverIt/player.json
     public static void SavePlayer(Transform player, Transform ball, int sceneIndex, int strokes, float time)
     {
-        // Pass both the player and the ball to the data container
-        PlayerData data = new PlayerData(player, ball, sceneIndex, strokes, time);
+        // Find the map generator in the scene before saving
+        PerlinMountain2D pcg = Object.FindFirstObjectByType<PerlinMountain2D>();
+
+        // Pass both the player, the ball, AND the generator to the data container
+        PlayerData data = new PlayerData(player, ball, sceneIndex, strokes, time, pcg);
+
         string json = JsonUtility.ToJson(data);
         string path = Application.persistentDataPath + "/player.json";
 
         File.WriteAllText(path, json);
-        Debug.Log("Game Saved to: " + path);
+        Debug.Log("Game Saved with Procedural Map State to: " + path);
     }
     public static PlayerData LoadPlayer()
     {
