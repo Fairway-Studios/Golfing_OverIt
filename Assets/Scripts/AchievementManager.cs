@@ -29,8 +29,8 @@ public class AchievementManager : MonoBehaviour
         }
 
         // TEMPORARY: Un-comment these to wipe your saves while testing
-        PlayerPrefs.DeleteKey("UnlockedAchievements_SP");
-        PlayerPrefs.DeleteKey("UnlockedAchievements_MP");
+        //PlayerPrefs.DeleteKey("UnlockedAchievements_SP");
+        //PlayerPrefs.DeleteKey("UnlockedAchievements_MP");
 
         LoadUnlockedAchievements();
     }
