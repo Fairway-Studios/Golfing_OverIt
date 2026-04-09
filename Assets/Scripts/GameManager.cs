@@ -69,21 +69,20 @@ public class GameManager : MonoBehaviour
     {
         if (GameSession.IsLoadingGame && players != null && players.Length > 0)
         {
-            PlayerData data = SaveSystem.LoadPlayer();
-            if (data != null)
+            // Call the cloud load, and run this block when the data arrives
+            SaveSystem.LoadPlayer(data =>
             {
-                // =========================================================
+                if (data == null) return;
+
                 // 1. RECONSTRUCT THE MAP FIRST
-                // =========================================================
                 PerlinMountain2D pcg = Object.FindFirstObjectByType<PerlinMountain2D>();
 
                 if (pcg != null && data.pcgData != null)
                 {
-                    // TURN OFF RANDOM SEED! Lock it to the saved seed.
+                    // Lock the seed and restore ALL settings
                     pcg.useRandomSeed = false;
                     pcg.seed = data.pcgData.seed;
 
-                    // Restore Mountain Settings
                     pcg.mountainCount = data.pcgData.mountainCount;
                     pcg.mountainWidth = data.pcgData.mountainWidth;
                     pcg.mountainSpacing = data.pcgData.mountainSpacing;
@@ -102,7 +101,6 @@ public class GameManager : MonoBehaviour
                     pcg.finishEdgeSearchWidth = data.pcgData.finishEdgeSearchWidth;
                     pcg.finishFlagFrontInset = data.pcgData.finishFlagFrontInset;
 
-                    // Restore Caves
                     if (pcg.caveGenerator != null)
                     {
                         pcg.caveGenerator.cavesPerMountain = data.pcgData.cavesPerMountain;
@@ -128,7 +126,6 @@ public class GameManager : MonoBehaviour
                         pcg.caveGenerator.maxSmoothedPoints = data.pcgData.maxSmoothedPoints;
                     }
 
-                    // Restore Shortcuts
                     if (pcg.shortcutGenerator != null)
                     {
                         pcg.shortcutGenerator.spawnTunnels = data.pcgData.spawnTunnels;
@@ -150,7 +147,6 @@ public class GameManager : MonoBehaviour
                         pcg.shortcutGenerator.maxNudgeSteps = data.pcgData.maxNudgeSteps;
                     }
 
-                    // Restore Obstacles
                     if (pcg.obstaclePlacer != null)
                     {
                         pcg.obstaclePlacer.spawnObstacles = data.pcgData.spawnObstacles;
@@ -169,21 +165,17 @@ public class GameManager : MonoBehaviour
                     pcg.GenerateNow();
                 }
 
-                // =========================================================
                 // 2. RESTORE METRICS & POSITIONS
-                // =========================================================
                 strokeCount = data.strokes;
                 elapsedTime = data.time;
 
                 Vector3 microOffset = new Vector3(0, 0.05f, 0);
-
                 Vector3 savedPlayerPos = new Vector3(data.playerPosition[0], data.playerPosition[1], data.playerPosition[2]) + microOffset;
                 Vector3 savedBallPos = new Vector3(data.ballPosition[0], data.ballPosition[1], data.ballPosition[2]) + microOffset;
 
                 InputController[] controllers = Object.FindObjectsByType<InputController>(FindObjectsSortMode.None);
-
-                // Move Ball
                 GolfBallController[] balls = Object.FindObjectsByType<GolfBallController>(FindObjectsSortMode.None);
+
                 if (balls != null && balls.Length > 0 && balls[0] != null)
                 {
                     balls[0].transform.position = savedBallPos;
@@ -198,7 +190,6 @@ public class GameManager : MonoBehaviour
                     balls[0].ResetForNextShot();
                 }
 
-                // Move Player
                 if (players[0] != null)
                 {
                     players[0].position = savedPlayerPos;
@@ -211,20 +202,18 @@ public class GameManager : MonoBehaviour
                     }
                 }
 
-                // Reset Physics Rigs
                 foreach (var c in controllers)
                 {
                     c.OnPlayerTeleported();
                 }
 
-                // Move Camera
                 if (cameraTransform != null)
                 {
                     cameraTransform.position = new Vector3(savedBallPos.x, savedBallPos.y, cameraTransform.position.z);
                 }
 
-                Debug.Log("Game Loaded: Procedural map reconstructed and exact positions restored.");
-            }
+                Debug.Log("Game Loaded from Cloud: Exact positions restored.");
+            });
         }
     }
 

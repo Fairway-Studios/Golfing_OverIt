@@ -119,7 +119,14 @@ public class SceneMGR : MonoBehaviour
 
             if (continueButton != null)
             {
-                continueButton.interactable = SaveSystem.HasSaveFile();
+                // Disable the button for a split second while we ask PlayFab
+                continueButton.interactable = false;
+
+                // Ask PlayFab, and when it answers, turn the button on or off
+                SaveSystem.CheckHasSaveFile(hasSave =>
+                {
+                    continueButton.interactable = hasSave;
+                });
             }
 
             if (newGameButton != null)
@@ -164,11 +171,19 @@ public class SceneMGR : MonoBehaviour
 
     public void ContinueGame()
     {
-        if (SaveSystem.HasSaveFile())
+        // Ask PlayFab to double-check the save exists before loading the scene
+        SaveSystem.CheckHasSaveFile(hasSave =>
         {
-            GameSession.IsLoadingGame = true;
-            SceneManager.LoadScene("SingleplayerScene");
-        }
+            if (hasSave)
+            {
+                GameSession.IsLoadingGame = true;
+                SceneManager.LoadScene("SingleplayerScene");
+            }
+            else
+            {
+                Debug.LogWarning("Tried to continue, but PlayFab couldn't find a save.");
+            }
+        });
     }
 
     public void SaveGame()
