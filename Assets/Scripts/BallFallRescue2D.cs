@@ -28,6 +28,10 @@ public class BallFallRescue2D : MonoBehaviour
         GolfBallController ballController = ballRb.GetComponent<GolfBallController>();
         GameManager gameManager = Object.FindFirstObjectByType<GameManager>();
 
+        bool isMultiplayer = false;
+        if (gameManager != null)
+            isMultiplayer = gameManager.IsMultiplayer();
+
         // Move ball
         ballRb.linearVelocity = Vector2.zero;
         ballRb.angularVelocity = 0f;
@@ -35,7 +39,11 @@ public class BallFallRescue2D : MonoBehaviour
         ballRb.transform.position = rescuePosition;
         ballRb.Sleep();
 
-        if (ballController != null)
+        // IMPORTANT:
+        // In single player, reset immediately.
+        // In multiplayer, do NOT reset here because GameManager still needs
+        // to detect stopped balls and then show the best-ball selection UI.
+        if (ballController != null && !isMultiplayer)
             ballController.ResetForNextShot();
 
         InputController[] controllers = Object.FindObjectsByType<InputController>(FindObjectsSortMode.None);
@@ -45,10 +53,6 @@ public class BallFallRescue2D : MonoBehaviour
         {
             controller.OnPlayerTeleported();
         }
-
-        bool isMultiplayer = false;
-        if (gameManager != null)
-            isMultiplayer = gameManager.IsMultiplayer();
 
         // In multiplayer: only teleport the ball
         if (!isMultiplayer)

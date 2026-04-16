@@ -448,7 +448,6 @@ public class GameManager : MonoBehaviour
 
     void TeleportToBall(int ownerIndex)
     {
-        // Hide indicators
         if (ballIndicators != null)
         {
             foreach (var ind in ballIndicators)
@@ -473,34 +472,6 @@ public class GameManager : MonoBehaviour
         if (chosen == null) return;
 
         Vector3 pos = chosen.GetPosition();
-
-        InputController[] controllers = Object.FindObjectsByType<InputController>(FindObjectsSortMode.None);
-        foreach (var c in controllers)
-            c.OnPlayerTeleported();
-
-        // First move players to chosen position
-        for (int i = 0; i < players.Length; i++)
-        {
-            if (players[i] != null)
-                players[i].position = pos + playerOffsetFromBall;
-        }
-
-        // Move both balls to chosen position
-        foreach (var ball in allBalls)
-        {
-            ball.DisableTrail();
-
-            Rigidbody2D rb = ball.GetRigidbody();
-            if (rb != null)
-            {
-                rb.linearVelocity = Vector2.zero;
-                rb.angularVelocity = 0f;
-                rb.position = pos;
-            }
-
-            ball.transform.position = pos;
-        }
-
         Vector3 finalPos = pos;
 
         if (obstaclePlacement != null)
@@ -508,9 +479,20 @@ public class GameManager : MonoBehaviour
             finalPos = obstaclePlacement.ResolveSharedSafeBallPosition(pos);
         }
 
-        // Move both balls to the SAME final safe position
+        InputController[] controllers = Object.FindObjectsByType<InputController>(FindObjectsSortMode.None);
+        foreach (var c in controllers)
+            c.OnPlayerTeleported();
+
+        for (int i = 0; i < players.Length; i++)
+        {
+            if (players[i] != null)
+                players[i].position = finalPos + playerOffsetFromBall;
+        }
+
         foreach (var ball in allBalls)
         {
+            ball.DisableTrail();
+
             Rigidbody2D rb = ball.GetRigidbody();
             if (rb != null)
             {
@@ -523,14 +505,8 @@ public class GameManager : MonoBehaviour
             ball.transform.position = finalPos;
         }
 
-        // Re-align players to final position
-        for (int i = 0; i < players.Length; i++)
-        {
-            if (players[i] != null)
-                players[i].position = finalPos + playerOffsetFromBall;
-        }
+        // ... rest unchanged (camera, ResetForNextShot, EnableTrail, achievements, etc.)
 
-        // Re-align camera to final position
         if (cameraTransform != null)
             cameraTransform.position = new Vector3(finalPos.x, finalPos.y, cameraTransform.position.z);
 
@@ -543,9 +519,9 @@ public class GameManager : MonoBehaviour
         if (selectionUI != null)
             selectionUI.SetActive(false);
 
-        // --- NEW: Track Teleport streaks for "The Backpack" ---
-        lastTeleportTime = Time.time; // Reset the Quick Draw timer
-        p1FellThisTurn = false;       // Reset fall flags for the next turn
+        // Achievement tracking (unchanged)
+        lastTeleportTime = Time.time;
+        p1FellThisTurn = false;
         p2FellThisTurn = false;
 
         if (ownerIndex == lastTeleportOwner)
@@ -559,9 +535,8 @@ public class GameManager : MonoBehaviour
         else
         {
             lastTeleportOwner = ownerIndex;
-            consecutiveTeleports = 1; // Reset streak if the other player's ball is chosen
+            consecutiveTeleports = 1;
         }
-        // --------------------------------------------------------
 
         ResetVotes();
         selectionActive = false;

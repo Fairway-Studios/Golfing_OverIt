@@ -309,6 +309,9 @@ public class PlaytestTeleportManager : MonoBehaviour
     {
         Vector3 currentPos = GetCurrentSharedBallPosition();
 
+        if (obstaclePlacement != null)
+            currentPos = obstaclePlacement.ResolveSharedSafeBallPosition(currentPos);
+
         if (!forceSave && shotHistoryPositions.Count > 0)
         {
             float dist = Vector3.Distance(shotHistoryPositions[shotHistoryPositions.Count - 1], currentPos);
@@ -343,22 +346,43 @@ public class PlaytestTeleportManager : MonoBehaviour
         if (shotHistoryPositions == null || shotHistoryPositions.Count == 0)
             return;
 
+        Vector3 currentPosition = GetCurrentSharedBallPosition();
+
+        // Resolve current position too, so comparison is fair.
+        if (obstaclePlacement != null)
+            currentPosition = obstaclePlacement.ResolveSharedSafeBallPosition(currentPosition);
+
         isBrowsingHistory = true;
 
-        historyBrowseIndex--;
+        int attempts = 0;
+        int maxAttempts = shotHistoryPositions.Count;
 
-        if (historyBrowseIndex < 0)
-            historyBrowseIndex = shotHistoryPositions.Count - 1;
+        while (attempts < maxAttempts)
+        {
+            historyBrowseIndex--;
 
-        if (historyBrowseIndex >= shotHistoryPositions.Count)
-            historyBrowseIndex = shotHistoryPositions.Count - 1;
+            if (historyBrowseIndex < 0)
+                historyBrowseIndex = shotHistoryPositions.Count - 1;
 
-        Vector3 targetPosition = shotHistoryPositions[historyBrowseIndex];
+            if (historyBrowseIndex >= shotHistoryPositions.Count)
+                historyBrowseIndex = shotHistoryPositions.Count - 1;
 
-        if (obstaclePlacement != null)
-            targetPosition = obstaclePlacement.ResolveSharedSafeBallPosition(targetPosition);
+            Vector3 candidatePosition = shotHistoryPositions[historyBrowseIndex];
 
-        TeleportToSpawn(targetPosition);
+            if (obstaclePlacement != null)
+                candidatePosition = obstaclePlacement.ResolveSharedSafeBallPosition(candidatePosition);
+
+            // Skip positions that resolve to basically the same place.
+            if (Vector3.Distance(candidatePosition, currentPosition) > minHistoryPositionDifference)
+            {
+                TeleportToSpawn(candidatePosition);
+                return;
+            }
+
+            attempts++;
+        }
+
+        // If everything resolves to the same spot, do nothing.
     }
 
     private void TeleportToNextSpawn()

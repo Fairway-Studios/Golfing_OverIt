@@ -42,12 +42,10 @@ public class ObstacleBallCollision2D : MonoBehaviour
 
         if (obstacleColor == ObstacleColor.Blue)
         {
-            // Red ball passes through blue obstacle
             SetIgnore(redCols, true);
         }
         else
         {
-            // Blue ball passes through red obstacle
             SetIgnore(blueCols, true);
         }
     }
@@ -76,47 +74,84 @@ public class ObstacleBallCollision2D : MonoBehaviour
         return obstacleColor == ObstacleColor.Blue ? blueBall : redBall;
     }
 
-    // NEW:
-    // Returns true if this test position is too close to the obstacle
-    // for the blocking ball.
+    /// <summary>
+    /// Returns the radius of the blocking ball's largest collider.
+    /// Cached after first call for performance.
+    /// </summary>
+    private float _cachedBallRadius = -1f;
+
+    float GetBlockingBallRadius()
+    {
+        if (_cachedBallRadius >= 0f) return _cachedBallRadius;
+
+        GolfBallController blockingBall = GetBlockingBall();
+        if (blockingBall == null) { _cachedBallRadius = 0f; return 0f; }
+
+        Collider2D[] ballCols = blockingBall.GetComponentsInChildren<Collider2D>(true);
+        float maxRadius = 0f;
+
+        for (int j = 0; j < ballCols.Length; j++)
+        {
+            if (ballCols[j] == null) continue;
+
+            // For CircleCollider2D, use radius directly. Otherwise use bounds extents.
+            CircleCollider2D circle = ballCols[j] as CircleCollider2D;
+            float r;
+            if (circle != null)
+            {
+                r = circle.radius * Mathf.Max(
+                    blockingBall.transform.lossyScale.x,
+                    blockingBall.transform.lossyScale.y);
+            }
+            else
+            {
+                r = Mathf.Max(ballCols[j].bounds.extents.x, ballCols[j].bounds.extents.y);
+            }
+
+            if (r > maxRadius) maxRadius = r;
+        }
+
+        _cachedBallRadius = maxRadius;
+        return maxRadius;
+    }
+
+    /// <summary>
+    /// Returns true if placing a ball at testPos would overlap or be too close to this obstacle.
+    /// Does NOT move any physics objects — purely geometric check.
+    /// </summary>
     public bool IsPositionBlockedForBlockingBall(Vector3 testPos, float extraClearance)
     {
         GolfBallController blockingBall = GetBlockingBall();
         if (blockingBall == null) return false;
+        if (obstacleColliders == null || obstacleColliders.Length == 0) return false;
 
-        Collider2D[] ballCols = blockingBall.GetComponentsInChildren<Collider2D>(true);
-        if (ballCols == null || ballCols.Length == 0) return false;
+        float ballRadius = GetBlockingBallRadius();
+        float totalClearance = ballRadius + extraClearance;
 
-        Rigidbody2D rb = blockingBall.GetRigidbody();
+        Vector2 testPos2D = new Vector2(testPos.x, testPos.y);
 
-        Vector3 originalTransformPos = blockingBall.transform.position;
-        Vector2 originalRbPos = rb != null ? rb.position : (Vector2)originalTransformPos;
-
-        if (rb != null)
+        for (int i = 0; i < obstacleColliders.Length; i++)
         {
-            rb.position = testPos;
-            rb.linearVelocity = Vector2.zero;
-            rb.angularVelocity = 0f;
+            Collider2D obstacleCol = obstacleColliders[i];
+            if (obstacleCol == null || !obstacleCol.enabled) continue;
+
+            // 1. Check if the point is inside the collider
+            if (obstacleCol.OverlapPoint(testPos2D))
+                return true;
+
+            // 2. Check if ball edge would overlap (point is outside but ball radius reaches in)
+            Vector2 closestPoint = obstacleCol.ClosestPoint(testPos2D);
+            float dist = Vector2.Distance(closestPoint, testPos2D);
+
+            if (dist <= totalClearance)
+                return true;
         }
 
-        blockingBall.transform.position = testPos;
-        Physics2D.SyncTransforms();
-
-        bool blocked = IsBallTooClose(ballCols, extraClearance);
-
-        if (rb != null)
-        {
-            rb.position = originalRbPos;
-            rb.linearVelocity = Vector2.zero;
-            rb.angularVelocity = 0f;
-        }
-
-        blockingBall.transform.position = originalTransformPos;
-        Physics2D.SyncTransforms();
-
-        return blocked;
+        return false;
     }
 
+    // Keep the old method around in case anything else references it,
+    // but it just delegates to the new approach.
     bool IsBallTooClose(Collider2D[] ballCols, float extraClearance)
     {
         if (obstacleColliders == null || obstacleColliders.Length == 0) return false;
@@ -133,8 +168,6 @@ public class ObstacleBallCollision2D : MonoBehaviour
 
                 ColliderDistance2D dist = obstacleCol.Distance(ballCol);
 
-                // distance < 0 = overlapping
-                // distance near 0 = touching / almost touching
                 if (dist.isOverlapped || dist.distance <= extraClearance)
                     return true;
             }
@@ -142,4 +175,6 @@ public class ObstacleBallCollision2D : MonoBehaviour
 
         return false;
     }
+
+
 }
