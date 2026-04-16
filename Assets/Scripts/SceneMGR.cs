@@ -66,6 +66,8 @@ public class SceneMGR : MonoBehaviour
 
         if (currentScene == "MainMenu" || currentScene == "CustomizationScene")
         {
+            GameSession.IsLoadingGame = false;
+
             SwitchToCanvas(menuCanvas);
             if (singlePlayerSubMenu != null) singlePlayerSubMenu.SetActive(false);
 
@@ -281,6 +283,10 @@ public class SceneMGR : MonoBehaviour
     public void ReturnToMainMenu()
     {
         Time.timeScale = 1f;
+
+        //Wipe the load state clean when leaving a game
+        GameSession.IsLoadingGame = false;
+
         SceneManager.LoadScene("MainMenu");
     }
 
